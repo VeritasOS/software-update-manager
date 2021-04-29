@@ -1,0 +1,18 @@
+#!/bin/bash
+# Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+myprg=$0
+myDir=$(dirname ${myprg})
+
+# Set environment variables for plugins to know the path of alternate root.
+#   i.e., upgrade volume.
+export VXAPP_UPGRADE_ROOT="/system/upgrade/volume/"
+
+echo "Restarting the node to continue with the update installation..."
+${myDir}/asum reboot "$@"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to restart the node."
+    exit 1
+fi
+
+exit 0

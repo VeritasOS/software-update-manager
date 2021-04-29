@@ -1,0 +1,3 @@
+Description=Restoring appliance node version...
+# Don't hardcode absolute path if it's inside plugin dir, instead use $PM_LIBRARY as shown below:
+ExecStart=/bin/sh $PM_LIBRARY/version/commit.sh

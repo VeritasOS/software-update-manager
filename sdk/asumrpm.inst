@@ -1,0 +1,5 @@
+#
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+# List of files to include in rpm
+#
+__TARGETDIR__/

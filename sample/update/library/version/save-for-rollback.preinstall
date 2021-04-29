@@ -1,0 +1,4 @@
+Description=Saving current appliance node version info for rollback purposes...
+# Don't hardcode absolute path if it's inside plugin dir, instead use $PM_LIBRARY as shown below:
+ExecStart=/bin/sh $PM_LIBRARY/version/save-for-rollback.sh
+Requires=version/status.preinstall

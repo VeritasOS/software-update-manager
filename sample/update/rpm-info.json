@@ -1,0 +1,73 @@
+{
+  "description": [
+    "Sample multi-line description of the update RPM.",
+    "Client scripts/GUI can display each item in this list in a separate para with appropriate linebreaks."
+  ],
+  "type": "update",
+  "compatibility-info": [
+    {
+      "product-version": "*",
+      "install": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like restarting node, ",
+          "and confirming that users have stopped instances."
+        ],
+        "requires-restart": true,
+        "supports-rollback": false,
+        "estimated-minutes": 35
+      },
+      "rollback": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like restarting node, ",
+          "and confirming that users have stopped instances."
+        ],
+        "requires-restart": true,
+        "estimated-minutes": 20
+      },
+      "commit": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like once update is committed, you cannot roll back.",
+          "Also, committing node restarts some services."
+        ],
+        "estimated-minutes": 5
+      }
+    },
+    {
+      "product-version": "__PRODUCT_VERSION__",
+      "install": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display warning messages and instructions like stopping instances."
+        ],
+        "requires-restart": false,
+        "supports-rollback": false,
+        "estimated-minutes": 25
+      },
+      "rollback": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like roll back requires restarting node, ",
+          "(even though install didn't require restart), as snapshot needs to be reverted."
+        ],
+        "requires-restart": true,
+        "estimated-minutes": 40
+      },
+      "commit": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like once update is committed, you cannot roll back."
+        ],
+        "estimated-minutes": 5
+      }
+    }
+  ]
+}

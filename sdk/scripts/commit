@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+myprg=$0
+myDir=$(dirname ${myprg})
+
+echo "Committing the update..."
+${myDir}/asum commit "$@"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to commit the update."
+    exit 1
+fi
+
+echo "Successfully committed the update."
+exit 0

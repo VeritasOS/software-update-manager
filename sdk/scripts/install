@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+myprg=$0
+myDir=$(dirname ${myprg})
+
+# Copy any update contents placed in the staging area to ${myDir}/.
+stage_area="/system/upgrade/stage/"
+update_stage_area="${stage_area}/update/"
+if [ -d ${update_stage_area} ]; then
+    echo "Copying latest update contents..."
+    # NOTE: Good idea not to display the staging location to everyone!
+    # echo "from staging area ${update_stage_area} to ${myDir}."
+    cp -fpr ${update_stage_area}/* ${myDir}
+fi
+
+# Set environment variables for plugins to know the path of alternate root.
+#   i.e., upgrade volume.
+export VXAPP_UPGRADE_ROOT="/system/upgrade/volume/"
+
+echo "Installing the update..."
+${myDir}/asum install "$@"
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to install the update."
+    exit 1
+fi
+
+echo "Successfully installed the update."
+exit 0

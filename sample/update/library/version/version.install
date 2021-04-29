@@ -1,0 +1,3 @@
+Description=Updating appliance version...
+# Don't hardcode absolute path if it's inside plugin dir, instead use $PM_LIBRARY.
+ExecStart=/opt/veritas/appliance/bin/set_vxosrel_info.sh -v __VERSION__
