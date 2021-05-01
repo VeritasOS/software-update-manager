@@ -105,7 +105,7 @@ generate:
 	pluginTypes=$(PLUGIN_TYPES); \
 	for pt in $${pluginTypes}; do \
 		echo "Generating image for $${pt}..."; \
-		$(TOP)/scripts/pm list -library $(PLUGINS_LIBRARY) -type $${pt} -log-dir $(PLUGINS_LIBRARY)/../imgs/ -log-file $${pt}; \
+		$(TOP)/scripts/asum pm list -library $(PLUGINS_LIBRARY) -type $${pt} -log-dir $(PLUGINS_LIBRARY)/../imgs/ -log-file $${pt}; \
 	done;
 
 	@echo ======== Keeping only plugin graph images and cleaning logs in image dir.
