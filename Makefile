@@ -8,6 +8,7 @@ help:	## Display this help message.
 
 TOP=$(CURDIR)
 BUILDDATE ?= $(shell /usr/bin/date -u +%Y%m%d%H%M%S)
+TAR = /bin/tar
 
 # Go build related variables
 GOSRC=$(TOP)
@@ -23,6 +24,8 @@ SDK_NAME = sum-sdk
 SDK_VERSION = 2.0
 SDK_REVERSION = 1
 SDK_SOURCE_PATH	= $(TOP)/sdk
+
+TAR       = /bin/tar
 
 .SILENT:
 
@@ -131,17 +134,71 @@ go-race: 	## Run Go tests with race detector enabled
 		exit 1; \
 	fi;
 
-.PHONY: ship-asum-sdk
-ship-asum-sdk: .copy_update_binaries
-	@echo "Creating ASUM SDK tar..."
+SUM_PATH = $(TOP)/
+SAMPLE_UPDATE= $(SUM_PATH)/sample/update/
+PRODUCT_VERSION = 1.0
+tmp_SUM_SDK = $(TOP)/tmp/sum-sdk
+tmp_SHIP_DIR = $(TOP)/tmp/ship
+
+# Ship SDK and create sample update RPM
+SUM_PATH = $(TOP)/
+SAMPLE_UPDATE = $(SUM_PATH)/sample/update
+PRODUCT_VERSION = 1.0
+tmp_SUM_SDK = $(TOP)/tmp/sum-sdk
+tmp_SHIP_DIR = $(TOP)/tmp/ship
+
+.PHONY: ship-sum-sdk
+ship-sum-sdk: .copy_update_binaries
+	@echo "Creating SUM SDK tar..."
 	# cp $(TOP)/tools/mkrpm.sh $(SDK_SOURCE_PATH)/;
 	ship_dir=$(TOP); \
 	if [ -n "$(SHIP_DIR)" ]; then \
 		ship_dir=$(SHIP_DIR); \
 		mkdir -p $${ship_dir} || exit 1; \
 	fi; \
-	asum_sdk_tar="$${ship_dir}/$(SDK_NAME)-$(SDK_VERSION)-$(SDK_REVERSION)-$(BUILDDATE).tar.gz"; \
-	/bin/tar -czf $${asum_sdk_tar} -C $(SDK_SOURCE_PATH) .; \
-	echo "Successfully created ASUM SDK at $${asum_sdk_tar}.";
+	sum_sdk_tar="$${ship_dir}/$(SDK_NAME)-$(SDK_VERSION)-$(SDK_REVERSION)-$(BUILDDATE).tar.gz"; \
+	/bin/tar -czf $${sum_sdk_tar} -C $(SDK_SOURCE_PATH) .; \
+	echo "Successfully created ASUM SDK at $${sum_sdk_tar}.";
+
+.PHONY: getsumsdk
+getsumsdk:
+	# NOTE: Usually the SUM SDK will be extracted from an already built tar.
+	#       But here, in this case, we need to first build the
+	#       SUM SDK tar and then consume it here.
+	echo "=============== Get SUM SDK ===============";
+	ship_dir=$(tmp_SHIP_DIR); \
+	rm -rf $${ship_dir}; \
+	$(MAKE) -C $(SUM_PATH) ship-sum-sdk SHIP_DIR=$${ship_dir}; \
+	echo "===============  extracting sum-sdk tar file =========================="; \
+	mkdir -p $(tmp_SUM_SDK); \
+	$(TAR) -xzvf $${ship_dir}/sum-sdk-*.tar.gz -C $(tmp_SUM_SDK); \
+	if [ $$? -ne 0 ]; then \
+		echo "ERROR: Failed to extract sum-sdk to $(tmp_SUM_SDK)"; \
+		exit 1; \
+	fi;
+
+.PHONY: sampleupdate
+sampleupdate: getsumsdk
+	echo "===============  Creating a sample update RPM   ===============";
+	git checkout -- $(TOP)/sample/update/library/version/version.install $(TOP)/sample/update/rpm-info.json
+	myVersion=$(PRODUCT_VERSION).9; \
+	sed -i -e "s%__VERSION__%$${myVersion}%g" $(TOP)/sample/update/library/version/version.install; \
+	sed -i -e "s%__PRODUCT_VERSION__%$(PRODUCT_VERSION)%g" $(TOP)/sample/update/rpm-info.json; \
+	JenkinsOptions=""; \
+	ship_dir=$(tmp_SHIP_DIR); \
+	if [ -n "$(JENKINS_URL)" ]; then \
+		JenkinsOptions="BUILDDATE=$${BUILDTAG##*-}"; \
+		ship_dir=$(JENKINS_UPLOAD_DEST); \
+	fi; \
+	$(MAKE) -C $(SAMPLE_UPDATE) update \
+		ASUM_SDK_PATH=$(tmp_SUM_SDK) \
+		SHIP_DIR=$${ship_dir} \
+		UPDATE_VERSION=$${myVersion} \
+		$${JenkinsOptions};
+	git checkout -- $(TOP)/sample/update/library/version/version.install $(TOP)/sample/update/rpm-info.json
+
+.PHONY: clean-update
+clean-update:
+	$(RM) -rf $(tmp_SUM_SDK)
 
 .NOTPARALLEL:
