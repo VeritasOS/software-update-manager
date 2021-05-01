@@ -1,4 +1,4 @@
-module software-update-manager
+module github.com/VeritasOS/software-update-manager
 
 go 1.12
 

@@ -8,11 +8,11 @@ import (
 	pm "github.com/VeritasOS/plugin-manager" // import "../../plugin-manager"
 	"github.com/VeritasOS/plugin-manager/config"
 	logutil "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/software-update-manager/repo"
+	"github.com/VeritasOS/software-update-manager/update"
+	"github.com/VeritasOS/software-update-manager/validate"
 	"os"
 	"path/filepath"
-	"software-update-manager/repo"
-	"software-update-manager/update"
-	"software-update-manager/validate"
 	"strings"
 )
 

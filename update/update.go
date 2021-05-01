@@ -9,12 +9,12 @@ import (
 	"github.com/VeritasOS/plugin-manager/config"
 	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"github.com/VeritasOS/plugin-manager/utils/output"
+	"github.com/VeritasOS/software-update-manager/repo"
+	"github.com/VeritasOS/software-update-manager/utils/rpm"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"software-update-manager/repo"
-	"software-update-manager/utils/rpm"
 )
 
 // RPMInstallRepoPath is the path where RPM contents are expected to installed/extracted.

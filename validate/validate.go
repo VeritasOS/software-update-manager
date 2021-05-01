@@ -6,12 +6,12 @@ import (
 	"flag"
 	"fmt"
 	logutil "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/software-update-manager/repo"
+	"github.com/VeritasOS/software-update-manager/validate/version"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"software-update-manager/repo"
-	"software-update-manager/validate/version"
 	"strings"
 )
 
