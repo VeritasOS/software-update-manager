@@ -6,11 +6,11 @@ package repo
 
 import (
 	"flag"
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
+	osutils "github.com/VeritasOS/plugin-manager/utils/os"
 	"log"
 	"os"
 	"path/filepath"
-	logutil "plugin-manager/utils/log"
-	osutils "plugin-manager/utils/os"
 	"strings"
 )
 

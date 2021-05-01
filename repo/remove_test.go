@@ -5,8 +5,8 @@
 package repo
 
 import (
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"os"
-	logutil "plugin-manager/utils/log"
 	"strings"
 	"testing"
 )

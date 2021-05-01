@@ -5,14 +5,14 @@ package update
 import (
 	"flag"
 	"fmt"
+	pm "github.com/VeritasOS/plugin-manager" // import "../plugin-manager"
+	"github.com/VeritasOS/plugin-manager/config"
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/plugin-manager/utils/output"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	pm "plugin-manager" // import "../plugin-manager"
-	"plugin-manager/config"
-	logutil "plugin-manager/utils/log"
-	"plugin-manager/utils/output"
 	"software-update-manager/repo"
 	"software-update-manager/utils/rpm"
 )

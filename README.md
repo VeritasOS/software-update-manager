@@ -1,6 +1,6 @@
 # Software Update Manager (SUM)
 
-The Software Update Manager (SUM) provides ability to update a system. It could be used to perform major or minor updates. The main difference of major and minor updates is whether the update RPM contains the entire ISO contents or not. The SUM framework can be used to perform live update or an offline update (i.e., utilitizing a separate partition). It relies on [Plugin Manager](https://github.com/VeritasOS/plugin-manager) & Plugins to drive or replay any required configuration. The SUM architecture & workflow can be found in the following sections.
+The Software Update Manager (SUM) provides ability to update a system. It could be used to perform major or minor updates. The main difference of major and minor updates is whether the update RPM contains the entire ISO contents or not. The SUM framework can be used to perform live update or an offline update (i.e., utilitizing a separate partition). It relies on [Plugin Manager](https://"github.com/VeritasOS/plugin-manager) & Plugins to drive or replay any required configuration. The SUM architecture & workflow can be found in the following sections.
 
 > **Table of Contents**
 
@@ -81,7 +81,7 @@ The framework also defines certain variables to enable plugins to access followi
 | Precheck before starting commit | `.commit-precheck` | - To check if all nodes in the cluster are updated. <br> - Check for applications are stopped if cluster upgrade action requires them to be stopped. |
 | Commit actions and cleanup any remnants | `.commit` | - Remove previous version container images. <br> - Perform one time actions that could not be run earlier in install step as they do not support rollback. Examples: <br> - cluster or storage (disk/fs) protocol upgrade. |
 
-> NOTE: The rollback plugins are expected to be re-runnable. In case [rollback fails](./troubleshooting.md), rollback plugins could be executed through [Plugin Manager (PM)](https://github.com/VeritasOS/plugin-manager).
+> NOTE: The rollback plugins are expected to be re-runnable. In case [rollback fails](./troubleshooting.md), rollback plugins could be executed through [Plugin Manager (PM)](https://"github.com/VeritasOS/plugin-manager).
 
 > - _For usage details of install, rollback and commit, refer to [install](./install.md), [rollback](./rollback.md) and [commit](./commit.md) documentation._
 

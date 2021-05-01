@@ -5,11 +5,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	pm "github.com/VeritasOS/plugin-manager" // import "../../plugin-manager"
+	"github.com/VeritasOS/plugin-manager/config"
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"os"
 	"path/filepath"
-	pm "plugin-manager" // import "../../plugin-manager"
-	"plugin-manager/config"
-	logutil "plugin-manager/utils/log"
 	"software-update-manager/repo"
 	"software-update-manager/update"
 	"software-update-manager/validate"
@@ -35,7 +35,7 @@ var mainCmdOptions struct {
 }
 
 func init() {
-	config.SetLogDir("/log/asum/")
+	config.SetLogDir("/var/log/asum/")
 }
 
 func main() {

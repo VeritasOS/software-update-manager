@@ -6,12 +6,12 @@ package repo
 
 import (
 	"flag"
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/plugin-manager/utils/output"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	logutil "plugin-manager/utils/log"
-	"plugin-manager/utils/output"
 	"regexp"
 	"software-update-manager/utils/rpm"
 	"software-update-manager/validate/version"

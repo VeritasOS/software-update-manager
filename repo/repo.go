@@ -7,10 +7,10 @@ package repo
 import (
 	"flag"
 	"fmt"
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"log"
 	"os"
 	"path/filepath"
-	logutil "plugin-manager/utils/log"
 	"strings"
 )
 

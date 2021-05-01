@@ -4,11 +4,11 @@
 package rpm
 
 import (
+	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	logutil "plugin-manager/utils/log"
 	"regexp"
 	"strings"
 )
