@@ -1,0 +1,2 @@
+Description=Update node version for Flex appliance
+ExecStart=ansible-playbook ${PM_LIBRARY}/node-version/set-node-version.yml -e version=__VERSION__

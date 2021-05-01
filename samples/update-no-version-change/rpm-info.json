@@ -1,0 +1,20 @@
+{
+    "description": [
+        "The update installs the latest version of Software Update Manager (SUM)."
+    ],
+    "type": "update",
+    "compatibility-info": [{
+        "product-version": "2.*",
+        "install": {
+            "confirmation-message": [
+                "Installing this update does not change the version.",
+                "",
+                "You can view the activity monitor for progress messages and the status of installation of this update.",
+                ""
+            ],
+            "requires-restart": false,
+            "supports-rollback": false,
+            "estimated-minutes": 5
+        }
+    }]
+}

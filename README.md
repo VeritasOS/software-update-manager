@@ -18,6 +18,12 @@ The Software Update Manager (SUM) provides ability to update a system. It could 
     - [Commit](#commit)
 - [Generating Update RPM](#generating-update-rpm)
 - [Sample Update](#sample-update)
+- [Usage](#usage)
+  - [Add software to repository](#add-software-to-repository)
+  - [Install {{ software_type }} RPM](#install--software_type--rpm)
+  - [Commit {{ software_type }} RPM](#commit--software_type--rpm)
+  - [Rollback {{ software_type }} RPM](#rollback--software_type--rpm)
+  - [Delete software](#delete-software)
 
 <!-- /TOC -->
 
@@ -100,3 +106,53 @@ For more details about SDK, refer to [SUM SDK](./sdk/README.md).
 
 A example usage of the framework can be found here:
 [sample-update](sample/update/Makefile).
+
+# Usage
+
+## Add software to repository
+
+```bash
+$ ${sum_binary} repo add
+-filepath={{ software_staging_area }}/{{ software_name }}
+-repo={{ software_repo }}"
+```
+
+## Install {{ software_type }} RPM
+
+```bash
+$ ${sum_binary} install
+-filename={{ software_name }}
+-type={{ software_type }}
+-repo={{ software_repo }}"
+```
+
+## Commit {{ software_type }} RPM
+
+```bash
+$ ${sum_binary} commit
+-filename={{ software_name }}
+-type={{ software_type }}
+-repo={{ software_repo }}
+-output-file={{ output_file }}
+-output-format={{ output_format | default("yaml") }}
+```
+
+## Rollback {{ software_type }} RPM
+
+```bash
+$ ${sum_binary} rollback
+-filename={{ software_name }}
+-type={{ software_type }}
+-repo={{ software_repo }}
+-output-file={{ output_file }}
+-output-format={{ output_format | default("yaml") }}
+```
+
+## Delete software
+
+```bash
+  {{ asum_binary }} repo remove
+  -repo={{ software_repo }}
+  -type={{ software_type | default("") }}
+  -filename={{ software_name | default("") }}
+```
