@@ -1,5 +1,7 @@
 # Software Update Manager (SUM)
 
+[![Go](https://github.com/VeritasOS/software-update-manager/actions/workflows/go.yml/badge.svg)](https://github.com/VeritasOS/software-update-manager/actions/workflows/go.yml)
+
 The Software Update Manager (SUM) provides ability to update a system. It could be used to perform major or minor updates. The main difference of major and minor updates is whether the update RPM contains the entire ISO contents or not. The SUM framework can be used to perform live update or an offline update (i.e., utilitizing a separate partition). It relies on [Plugin Manager](https://"github.com/VeritasOS/plugin-manager) & Plugins to drive or replay any required configuration. The SUM architecture & workflow can be found in the following sections.
 
 > **Table of Contents**
