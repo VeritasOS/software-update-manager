@@ -1,0 +1,16 @@
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+---
+- hosts: localhost
+  remote_user: root
+  gather_facts: yes
+
+  tasks:
+    - name: Update version in /etc/vxos-release fields
+      shell: "/opt/veritas/appliance/bin/set_vxosrel_info.sh -v '{{ version }}'"
+
+    - name: Update DB
+      centralconfig:
+          operation: update
+          namespace: "platform_config"
+          params: "[{ \"key\": \"{{ ansible_machine_id }}.product_version\", \"value\": \"{{ version }}\"}]"

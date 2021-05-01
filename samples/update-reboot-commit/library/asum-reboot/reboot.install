@@ -1,0 +1,5 @@
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+Description=Preparing for reboot
+# NOTE: Call `asum reboot` as the last step in `install` step to automatically
+#   invoke (pre)reboot actions.
+ExecStart=${PM_LIBRARY}/../asum reboot

@@ -127,7 +127,7 @@ go-race: 	## Run Go tests with race detector enabled
 
 .PHONY: .copy_update_binaries
 .copy_update_binaries: build
-	echo "Copying ASUM SDK related binaries...";
+	echo "Copying SUM SDK related binaries...";
 	cp -prf $(GOBIN)/* $(SDK_SOURCE_PATH)/scripts/; \
 	if [ $$? -ne 0 ]; then \
  		echo "ERROR: $${f} failed to copy to $(SDK_SOURCE_PATH)/scripts/"; \
@@ -158,7 +158,7 @@ ship-sum-sdk: .copy_update_binaries
 	fi; \
 	sum_sdk_tar="$${ship_dir}/$(SDK_NAME)-$(SDK_VERSION)-$(SDK_REVERSION)-$(BUILDDATE).tar.gz"; \
 	/bin/tar -czf $${sum_sdk_tar} -C $(SDK_SOURCE_PATH) .; \
-	echo "Successfully created ASUM SDK at $${sum_sdk_tar}.";
+	echo "Successfully created SUM SDK at $${sum_sdk_tar}.";
 
 .PHONY: getsumsdk
 getsumsdk:
@@ -177,8 +177,46 @@ getsumsdk:
 		exit 1; \
 	fi;
 
-.PHONY: sampleupdate
-sampleupdate: getsumsdk
+# TODO: Update below target to download from github.
+.PHONY: get_remote_sum_sdk
+get_remote_sum_sdk:
+	# Avoid downloading it again when it's already present. Run `get_latest_asum_sdk` to get latest.
+ifeq ($(shell ls $(tmp_SUM_SDK)/.no-latest 2> /dev/null),) 
+	$(ECHO) "===== Downloading ASUM RPM Generation utility (asum-sdk) $(tmp_SUM_SDK) =====";
+	$(RM) -rf $(tmp_SUM_SDK); 
+	$(MKDIR) -p $(tmp_SUM_SDK);
+	px_api_url="$(HTTP_ARTIFACTORY)/api/storage/release/platformx/main"; \
+	px_ver=$$($(CURL) $${px_api_url} | jq -c '.children[] | select(.folder)' | sort -V | tail -2 | head -1 | jq .uri); \
+	px_ver=$${px_ver:2:-1}; \
+	px_buildtag=$${px_ver##*-}; \
+	$(ECHO) "PlatformX latest version-buildtag: $${px_ver}"; \
+	rpm_name=$$($(CURL) $(HTTP_ARTIFACTORY)/api/storage/release/platformx/main/$${px_ver}/ \
+		| jq '.children[].uri' | grep asum-sdk); \
+	rpm_name=$${rpm_name%\"}; \
+	rpm_name=$${rpm_name#\"}; \
+	$(ECHO) "RPM: $${rpm_name}"; \
+	$(ECHO) "===== Downloading $${rpm_name} ====="; \
+	asum_url="$(HTTP_ARTIFACTORY)/release/platformx/main/$${px_ver}/"; \
+	$(WGET) $${asum_url}/$${rpm_name} -P $(tmp_SUM_SDK); \
+	if [ $$? -ne 0 ] ; then \
+		$(ECHO) "ERROR: $(WGET) $${rpm_name} failed to download."; \
+		exit 1; \
+	fi ; \
+	$(ECHO) Successfully downloaded $${rpm_name} into $(tmp_SUM_SDK);
+
+	echo "===============  Extracting asum-sdk =========================="; \
+	$(TAR) -xzvf $(tmp_SUM_SDK)/asum-sdk-*.tar.gz -C $(tmp_SUM_SDK); \
+	if [ $$? -ne 0 ]; then \
+	    echo "ERROR: Failed to extract asum-sdk to $(tmp_SUM_SDK)"; \
+		exit 1; \
+	fi;
+	$(ECHO) "To avoid downloading latest SUM SDK again and again on local " \
+		"builds, you can touch $(tmp_SUM_SDK)/.no-latest file. "
+	# touch $(tmp_SUM_SDK)/.no-latest
+endif
+
+.PHONY: sampleupdate_usinglocalsdk
+sampleupdate_usinglocalsdk: getsumsdk
 	echo "===============  Creating a sample update RPM   ===============";
 	git checkout -- $(TOP)/sample/update/library/version/version.install $(TOP)/sample/update/rpm-info.json
 	myVersion=$(PRODUCT_VERSION).9; \
@@ -191,11 +229,72 @@ sampleupdate: getsumsdk
 		ship_dir=$(JENKINS_UPLOAD_DEST); \
 	fi; \
 	$(MAKE) -C $(SAMPLE_UPDATE) update \
-		ASUM_SDK_PATH=$(tmp_SUM_SDK) \
+		SUM_SDK_PATH=$(tmp_SUM_SDK) \
 		SHIP_DIR=$${ship_dir} \
 		UPDATE_VERSION=$${myVersion} \
 		$${JenkinsOptions};
 	git checkout -- $(TOP)/sample/update/library/version/version.install $(TOP)/sample/update/rpm-info.json
+
+
+.PHONY: sampleupdates
+sampleupdates: sampleupdate_usinglocalsdk sampleupdate sampleupdate_reboot_commit sampleupdate_no_version_change
+
+.PHONY: sampleupdate
+sampleupdate: get_remote_sum_sdk
+	$(ECHO) "======== Generating sample update RPM using SUM SDK..."; \
+	git checkout -- samples/update/library/node-version/node-version.install
+	myVersion=$(VERSION).0.9; \
+	sed -i -e "s%__VERSION__%$${myVersion}%g" $(TOP)/samples/update/library/node-version/node-version.install; \
+	ship_dir=$(TOP); \
+	if [ -n "$(JENKINS_URL)" ]; then \
+		Options="RPM_RELEASE=$${BUILDTAG##*-}"; \
+		ship_dir=$(TOP)/$(PRODUCT)/$(BRANCH)/$(BUILDTAG); \
+	fi; \
+	$(MAKE) -C $(tmp_SUM_SDK) generate \
+		PLUGINS_LIBRARY=$(TOP)/samples/update/library/ \
+		RPM_INFO_FILE=$(TOP)/samples/update/rpm-info.json \
+		RPM_URL=https://github.com/VeritasOS/software-update-manager \
+		RPM_VERSION=$${myVersion} \
+		SHIP_DIR=$${ship_dir} \
+		$${Options} || exit $$?
+	git checkout -- samples/update/library/node-version/node-version.install
+
+.PHONY: sampleupdate_reboot_commit
+sampleupdate_reboot_commit: get_remote_sum_sdk
+	$(ECHO) "======== Generating sample update RPM requiring reboot using SUM SDK...";
+	git checkout -- samples/update-reboot-commit/library/node-version/node-version.install
+	myVersion=$(VERSION).9; \
+	sed -i -e "s%__VERSION__%$${myVersion}%g" $(TOP)/samples/update-reboot-commit/library/node-version/node-version.install; \
+	ship_dir=$(TOP); \
+	if [ -n "$(JENKINS_URL)" ]; then \
+		Options="RPM_RELEASE=$${BUILDTAG##*-}"; \
+		ship_dir=$(TOP)/$(PRODUCT)/$(BRANCH)/$(BUILDTAG); \
+	fi; \
+	$(MAKE) -C $(tmp_SUM_SDK) generate \
+		PLUGINS_LIBRARY=$(TOP)/samples/update-reboot-commit/library/ \
+		RPM_INFO_FILE=$(TOP)/samples/update-reboot-commit/rpm-info.json \
+		RPM_URL=https://github.com/VeritasOS/software-update-manager \
+		RPM_VERSION=$${myVersion} \
+		SHIP_DIR=$${ship_dir} \
+		$${Options} || exit $$?
+	git checkout -- samples/update-reboot-commit/library/node-version/node-version.install
+
+.PHONY:sampleupdate_no_version_change
+sampleupdate_no_version_change:
+	$(ECHO) "======== Generating sample update RPM using SUM SDK..."; \
+	myVersion=2.0.0.0.$${BUILDTAG##*-}; \
+	ship_dir=$(tmp_SHIP_DIR); \
+	if [ -n "$(JENKINS_URL)" ]; then \
+		Options="RPM_RELEASE=$${BUILDTAG##*-}"; \
+		ship_dir=$(TOP)/$(PRODUCT)/$(BRANCH)/$(BUILDTAG); \
+	fi; \
+	$(MAKE) -C $(tmp_SUM_SDK) generate \
+		PLUGINS_LIBRARY=$(TOP)/samples/update-no-version-change/library/ \
+		RPM_INFO_FILE=$(TOP)/samples/update-no-version-change/rpm-info.json \
+		RPM_URL=https://github.com/VeritasOS/software-update-manager \
+		RPM_VERSION=$${myVersion} \
+		SHIP_DIR=$${ship_dir} \
+		$${Options} || exit $$?
 
 .PHONY: clean-update
 clean-update:
