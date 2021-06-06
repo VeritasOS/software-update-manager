@@ -9,25 +9,26 @@ The Software Update Manager (SUM) provides ability to update a system. It could 
 <!-- TOC -->
 
 - [Software Update Manager (SUM)](#software-update-manager-sum)
-- [Architecture](#architecture)
-- [Workflow](#workflow)
-  - [Plugins](#plugins)
-    - [Install](#install)
-    - [Reboot](#reboot)
-    - [Rollback](#rollback)
-    - [Commit](#commit)
-- [Generating Update RPM](#generating-update-rpm)
-- [Sample Update](#sample-update)
-- [Usage](#usage)
-  - [Add software to repository](#add-software-to-repository)
-  - [Install {{ software_type }} RPM](#install--software_type--rpm)
-  - [Commit {{ software_type }} RPM](#commit--software_type--rpm)
-  - [Rollback {{ software_type }} RPM](#rollback--software_type--rpm)
-  - [Delete software](#delete-software)
+  - [Architecture](#architecture)
+  - [Workflow](#workflow)
+    - [Plugins](#plugins)
+      - [Install](#install)
+      - [Reboot](#reboot)
+      - [Rollback](#rollback)
+      - [Commit](#commit)
+  - [Generating Update RPM](#generating-update-rpm)
+  - [Sample Update](#sample-update)
+  - [Usage](#usage)
+    - [Add software to repository](#add-software-to-repository)
+    - [List software](#list-software)
+    - [Delete software](#delete-software)
+    - [Install ${software_type} RPM](#install-software_type-rpm)
+    - [Commit ${software_type} RPM](#commit-software_type-rpm)
+    - [Rollback ${software_type} RPM](#rollback-software_type-rpm)
 
 <!-- /TOC -->
 
-# Architecture
+## Architecture
 
 At a high-level, the SUM architecture is as shown below.
 
@@ -42,13 +43,13 @@ At a high-level, the SUM architecture is as shown below.
 
 > NOTE: SUM is designed to update system locally. The rolling updates in case of cluster, should be handled by the orchestration layer.
 
-# Workflow
+## Workflow
 
 This section details out the design of the SUM Update Framework.
 
 ![SUM Update Framework](./docs/imgs/Update_Framework.svg)
 
-## Plugins
+### Plugins
 
 The SUM Framework uses [Plugin Manager (PM)](./pm.md) to perform several of it's actions, and defines the types of plugins to perform following user actions: install, reboot, rollback and commit in the below sections.
 The framework also defines certain variables to enable plugins to access following paths:
@@ -58,14 +59,14 @@ The framework also defines certain variables to enable plugins to access followi
 | `${PM_LIBRARY}` | Plugins library path. |
 | `${VXAPP_UPGRADE_ROOT}` | Alternate root volume path for doing offline updates. |
 
-### Install
+#### Install
 
 | Types | File extensions | Examples |
 | --- | --- | --- |
 | Pre-install update actions | `.preinstall` | - Bind mount required file systems inside update volume before installing RPM/ISO, to share configuration that could be used during install step. One could have say `mountfs.preinstall` plugin to perform the same action. <br> - Check whether application is stopped. |
 | Install update actions | `.install` | VUF install could be used with appropriate arguments to perform either live or offline update. |
 
-### Reboot
+#### Reboot
 
 | Types | File extensions | Examples |
 | --- | --- | --- |
@@ -74,7 +75,7 @@ The framework also defines certain variables to enable plugins to access followi
 
 > **NOTE:** If an action can be performed before the reboot, then it is recommended to do it in the `.prereboot` plugin rather than a `.postreboot` plugin, so that if there are any failures, it can be caught before reboot which helps in avoiding downtime for customers.
 
-### Rollback
+#### Rollback
 
 | Types | File extensions | Examples |
 | --- | --- | --- |
@@ -82,7 +83,7 @@ The framework also defines certain variables to enable plugins to access followi
 | Pre rollback actions | `.prerollback` | - Set Grub to boot to old version in case of using offline update approach. <br> - Revert snapshot. |
 | Rollback actions | `.rollback` | - Remove new version container images. |
 
-### Commit
+#### Commit
 
 | Types | File extensions | Examples |
 | --- | --- | --- |
@@ -96,63 +97,78 @@ The framework also defines certain variables to enable plugins to access followi
 The update plugins must be deployed into a plugin folder under plugins library path i.e., `${PM_LIBRARY}/<plugin-folder>/`.
 To access this path in plugins, one must use environment variable `${PM_LIBRARY}` to access the plugins library location.
 
-# Generating Update RPM
+## Generating Update RPM
 
 An update RPM should be SUM format compliant in order for one to successfully
 install the update. In order to generate such an RPM, one should use SUM SDK.
 For more details about SDK, refer to [SUM SDK](./sdk/README.md).
 
-# Sample Update
+## Sample Update
 
 A example usage of the framework can be found here:
 [sample-update](sample/update/Makefile).
 
-# Usage
+## Usage
 
-## Add software to repository
+The following sub-sections detail out the software update manager command tool usage. The default values of some of the optional parameters are as follows:
+
+- `repo`: `"/system/software/repository/"`
+- `output_format`: `"yaml"`
+
+### Add software to repository
 
 ```bash
-$ ${sum_binary} repo add
--filepath={{ software_staging_area }}/{{ software_name }}
--repo={{ software_repo }}"
+$ ${sum_binary} repo add -filepath=${software_staging_area}/${software_name}
+[ -repo=${software_repo} ]
 ```
 
-## Install {{ software_type }} RPM
+### List software
+
+```bash
+$ ${sum_binary} repo list 
+[ -repo=${software_repo} ]
+[ -type=${software_type} ]
+[ -filename=${software_name} ]
+```
+
+### Delete software
+
+```bash
+$ ${sum_binary} repo remove
+-type=${software_type}
+-filename=${software_name}
+[ -repo=${software_repo} ]
+[ -output-file=${output_file} ]
+[ -output-format=${output_format} ]
+```
+
+### Install ${software_type} RPM
 
 ```bash
 $ ${sum_binary} install
--filename={{ software_name }}
--type={{ software_type }}
--repo={{ software_repo }}"
+-filename=${software_name}
+-type=${software_type}
+[ -repo=${software_repo} ]
 ```
 
-## Commit {{ software_type }} RPM
+### Commit ${software_type} RPM
 
 ```bash
 $ ${sum_binary} commit
--filename={{ software_name }}
--type={{ software_type }}
--repo={{ software_repo }}
--output-file={{ output_file }}
--output-format={{ output_format | default("yaml") }}
+-filename=${software_name}
+-type=${software_type}
+[ -repo=${software_repo} ]
+[ -output-file=${output_file} ]
+[ -output-format=${output_format} ]
 ```
 
-## Rollback {{ software_type }} RPM
+### Rollback ${software_type} RPM
 
 ```bash
 $ ${sum_binary} rollback
--filename={{ software_name }}
--type={{ software_type }}
--repo={{ software_repo }}
--output-file={{ output_file }}
--output-format={{ output_format | default("yaml") }}
-```
-
-## Delete software
-
-```bash
-  {{ asum_binary }} repo remove
-  -repo={{ software_repo }}
-  -type={{ software_type | default("") }}
-  -filename={{ software_name | default("") }}
+-filename=${software_name}
+-type=${software_type}
+[ -repo=${software_repo} ]
+[ -output-file=${output_file} ]
+[ -output-format=${output_format} ]
 ```
