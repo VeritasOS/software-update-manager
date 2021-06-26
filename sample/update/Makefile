@@ -20,14 +20,14 @@ all: update
 
 .PHONY: update
 update:
-	@echo "======== Generating update RPM using ASUM SDK..."; \
+	@echo "======== Generating update RPM using SUM SDK..."; \
 	$(MAKE) -C $(SUM_SDK_PATH) generate \
 		PLUGINS_LIBRARY=$(TOP)/library/ \
 		RPM_NAME=$(UPDATE_RPM_NAME) \
 		RPM_VERSION=$(UPDATE_VERSION) \
 		RPM_RELEASE=$(UPDATE_RELEASE) \
 		RPM_URL=$(UPDATE_URL) \
-		RPM_SUMMARY="Sample Update RPM created using ASUM SDK" \
+		RPM_SUMMARY="Sample Update RPM created using SUM SDK" \
 		RPM_INFO_FILE=$(UPDATE_RPM_INFO_FILE) || exit $$?
 
 

@@ -19,7 +19,7 @@ fi
 export VXAPP_UPGRADE_ROOT="/system/upgrade/volume/"
 
 echo "Installing the update..."
-${myDir}/asum install "$@"
+${myDir}/sum install "$@"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to install the update."
     exit 1

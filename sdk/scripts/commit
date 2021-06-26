@@ -5,7 +5,7 @@ myprg=$0
 myDir=$(dirname ${myprg})
 
 echo "Committing the update..."
-${myDir}/asum commit "$@"
+${myDir}/sum commit "$@"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to commit the update."
     exit 1

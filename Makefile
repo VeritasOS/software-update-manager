@@ -20,7 +20,7 @@ GOTOOLSBIN=$(TOP)/tools/go/
 
 # SUM SDK related variables
 SDK_NAME = sum-sdk
-# Keep the SDK_VERSION same as ASUM_RPM_FORMAT_VERSION.
+# Keep the SDK_VERSION same as RPM_FORMAT_VERSION.
 SDK_VERSION = 2.0
 SDK_REVERSION = 1
 SDK_SOURCE_PATH	= $(TOP)/sdk

@@ -21,9 +21,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// FormatVersionName is the ASUM RPM format version string that's embedded
+// FormatVersionName is the RPM format version string that's embedded
 // 	into RPM used for identifying the JSON format version.
-const FormatVersionName = "ASUM RPM Format Version"
+const FormatVersionName = "RPM Format Version"
 
 // RPMInfo is the list of RPM package info
 type RPMInfo interface {
