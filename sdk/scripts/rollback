@@ -6,7 +6,7 @@ myDir=$(dirname ${myprg})
 
 echo "Rolling back the update..."
 # NOTE: 
-#   1. The rollback plugins would now be called as part of the `asum install`
+#   1. The rollback plugins would now be called as part of the `sum install`
 #       itself.
 #   2. This `rollback` script (i.e., ${myprg}) would be called through rollback
 #       REST API soon to do rollback-precheck, reboot & then rollback. Till

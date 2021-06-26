@@ -21,7 +21,7 @@ var (
 	// progname is name of my binary/program/executable.
 	progname = filepath.Base(os.Args[0])
 	// version of my program.
-	version = "5.8"
+	version = "5.9"
 )
 
 func mainRegisterCmdOptions() {
@@ -35,7 +35,7 @@ var mainCmdOptions struct {
 }
 
 func init() {
-	config.SetLogDir("/var/log/asum/")
+	config.SetLogDir("/var/log/sum/")
 }
 
 func main() {
@@ -118,7 +118,7 @@ func usage(progname, subcmd string) {
 	switch subcmd {
 	case "":
 		const usageStr = `
-SUM (PROGNAME) is a tool for Software Updates Management (ASUM).
+SUM (PROGNAME) is a tool for Software Updates Management (SUM).
 
 Usage:
 
@@ -132,7 +132,7 @@ The commands are:
 	reboot		reboots/restarts the node running reboots specific action for installing software update.
 	repo 		perform Software Repository management operations.
 	rollback	rolls back the installed software update.
-	version		print Software Updates Management (ASUM) version.
+	version		print Software Updates Management (SUM) version.
 
 Use "PROGNAME help [command]" for more information about a command.
 		

@@ -87,12 +87,12 @@ Packager    : Veritas AS DevOps <DL-VTAS-AS-Team-Peregrine@veritas.com>
 URL         : https://www.veritas.com/support/en_US.html
 Summary     : Sample Update RPM created using ASUM SDK
 Description :
-ASUM RPM Format Version : 2
+RPM Format Version : 2
 RPM Info    : {"Description":["Sample multi-line description of the update RPM.","Client scripts/GUI can display each item in this list in a separate para with appropriate linebreaks."],"Type":"Update","VersionInfo":[{"Version":"*","install":{"confirmation-message":["Sample multi-line confirmation message","","Display info messages and instructions like restarting node, ","and confirming that users have stopped instances."],"requires-restart":true,"supports-rollback":false,"estimated-minutes":35},"rollback":{"confirmation-message":["Sample multi-line confirmation message","","Display info messages and instructions like restarting node, ","and confirming that users have stopped instances."],"requires-restart":true,"estimated-minutes":20},"commit":{"confirmation-message":["Sample multi-line confirmation message","","Display info messages and instructions like once update is committed, you cannot roll back.","Also, committing node restarts some services."],"estimated-minutes":5}},{"Version":"3.*","install":{"confirmation-message":["Sample multi-line confirmation message","","Display warning messages and instructions like stopping instances."],"requires-restart":false,"supports-rollback":false,"estimated-minutes":25},"rollback":{"confirmation-message":["Sample multi-line confirmation message","","Display info messages and instructions like roll back requires restarting node, ","(even though install didn't require restart), as snapshot needs to be reverted."],"requires-restart":true,"estimated-minutes":40},"commit":{"confirmation-message":["Sample multi-line confirmation message","","Display info messages and instructions like once update is committed, you cannot roll back."],"estimated-minutes":5}}]}
 `,
 			},
 			want: map[string]string{
-				"ASUM RPM Format Version": "2",
+				"RPM Format Version": "2",
 				"Architecture":            "x86_64",
 				"Build Date":              "Wed 22 Jul 2020 05:17:50 PM PDT",
 				"Build Host":              "builder",

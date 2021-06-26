@@ -13,7 +13,7 @@ BuildArch:      x86_64
 Packager:       Appliance Solutions
 
 %description
-ASUM RPM Format Version : __ASUM_RPM_FORMAT_VERSION__
+RPM Format Version : __RPM_FORMAT_VERSION__
 RPM Info    : __RPM_INFO__
 
 %define debug_package %{nil}
