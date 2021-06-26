@@ -12,7 +12,7 @@ echo "Rolling back the update..."
 #       REST API soon to do rollback-precheck, reboot & then rollback. Till
 #       then, this is just a noop i.e., exit with 0.
 
- ${myDir}/asum rollback "$@"
+ ${myDir}/sum rollback "$@"
  if [ $? -ne 0 ]; then
      echo "Error: Failed to roll back the update."
      exit 1
