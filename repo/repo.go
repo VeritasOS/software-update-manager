@@ -84,7 +84,7 @@ func registerCommandVersion(progname string) {
 // Input:
 // 	1. map[string]interface{}
 //    where, the options could be following:
-// 		"progname":  Name of the program along with any cmds (ex: asum pm)
+// 		"progname":  Name of the program along with any cmds (ex: sum pm)
 // 		"cmd-index": Index to the cmd (ex: run)
 func ScanCommandOptions(options map[string]interface{}) error {
 	log.Printf("Entering ScanCommandOptions(%+v)...", options)

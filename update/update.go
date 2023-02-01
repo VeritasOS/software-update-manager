@@ -29,10 +29,10 @@ const (
 // Status is the execution/run status of PM on a specified plugin type.
 type Status struct {
 	// INFO: The Status contains info of all operations so as to support
-	//  all operations with one call to asum with appropriate flags set to
+	//  all operations with one call to sum with appropriate flags set to
 	// 	continue onto the next operation.
 	// 	Ex: Install can receive auto-reboot=true, in which after installation
-	// 		is completed successfully, `asum` will run reboot operation.
+	// 		is completed successfully, `sum` will run reboot operation.
 	Install   []pm.RunStatus `yaml:",omitempty"`
 	Reboot    []pm.RunStatus `yaml:",omitempty"`
 	Rollback  []pm.RunStatus `yaml:",omitempty"`
@@ -149,7 +149,7 @@ func runCmdFromRPM(action, swName, swType string, params map[string]string) erro
 	rpmInfo := listInfo[0]
 
 	// INFO: Only for `install` action, we need to first install/extract the
-	// 		ASUM RPM to get the install script. For all other actions, the
+	// 		SUM RPM to get the install script. For all other actions, the
 	// 		install script is expected to run first, and hence they're
 	// 		expected to be present at the scripts location.
 	if "install" == action {
@@ -370,7 +370,7 @@ func RegisterCommandOptions(progname string) {
 // Input:
 // 	1. map[string]interface{}
 //    where, the options could be following:
-// 		"progname":  Name of the program along with any cmds (ex: asum pm)
+// 		"progname":  Name of the program along with any cmds (ex: sum pm)
 // 		"cmd-index": Index to the cmd (ex: run)
 func ScanCommandOptions(options map[string]interface{}) error {
 	log.Printf("Entering ScanCommandOptions(%+v)...", options)

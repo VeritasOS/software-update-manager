@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
-// Package rpm contains utility functions (required by ASUM) for managing RPM files.
+// Package rpm contains utility functions (required by SUM) for managing RPM files.
 package rpm
 
 import (

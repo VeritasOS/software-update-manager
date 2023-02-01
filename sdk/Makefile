@@ -1,14 +1,14 @@
 # Copyright (c) 2021 Veritas Technologies LLC. All rights reserved IP63-2828-7171-04-15-9.
 
-# ASUM_RPM_FORMAT_VERSION is like a protocol version.
-# 	This will be used by the ASUM binary to list the contents appropriately.
+# RPM_FORMAT_VERSION is like a protocol version.
+# 	This will be used by the SUM binary to list the contents appropriately.
 # 	This version needs to be updated, only if there is format/layout changes
-# 	that breaks backward compatibility w.r.t. parsing RPM info by the `asum`
+# 	that breaks backward compatibility w.r.t. parsing RPM info by the `sum`
 # 	binary.
-ASUM_RPM_FORMAT_VERSION=2
+RPM_FORMAT_VERSION=2
 
 # Jenking build options
-PRODUCT?=asum
+PRODUCT?=sum
 VERSION?=1.0
 BRANCH?=main
 
@@ -32,8 +32,8 @@ PLUGINS_LIBRARY?=$(PACKAGE_DIR)/library
 PLUGIN_TYPES?="preinstall install prereboot postreboot rollback-precheck prerollback rollback commit-precheck commit"
 
 RPM_PRE_SCRIPT?=$(RPM_SCRIPTS_DIR)/rpm_pre.sh
-RPM_SPEC_FILE=asumrpm.spec
-RPM_INST_FILE=asumrpm.inst
+RPM_SPEC_FILE=sumrpm.spec
+RPM_INST_FILE=sumrpm.inst
 
 TARGET_DIR=system/upgrade/repository/update/$(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE)
 
@@ -50,7 +50,7 @@ all: generate
 # 	required for updating the system. 
 .PHONY: generate
 generate:
-	@echo ===== Generating ASUM RPM =====
+	@echo ===== Generating SUM RPM =====
 	@echo Creating spec and inst files.
 	if [ ! -f $(RPM_INFO_FILE) ] ; then \
 		echo "RPM Info JSON file does not exist at $(RPM_INFO_FILE)." ; \
@@ -76,7 +76,7 @@ generate:
 		-e "s%__VERSION__%$(RPM_VERSION)%g" \
 		-e "s|__RELEASE__|$(RPM_RELEASE)|g" \
 		-e "s%__URL__%$(RPM_URL)%g" \
-		-e "s%__ASUM_RPM_FORMAT_VERSION__%$(ASUM_RPM_FORMAT_VERSION)%g" \
+		-e "s%__RPM_FORMAT_VERSION__%$(RPM_FORMAT_VERSION)%g" \
 		-e "s%__RPM_INFO__%$${rpm_desc}%g" \
 		$(PACKAGE_DIR)/SPECS/$(RPM_SPEC_FILE);
 
@@ -95,7 +95,7 @@ generate:
 		7z x $(ISO_PATH) -o$(PLUGINS_LIBRARY)/$${iso_target_dir}/ -y; \
 	fi ; \
 
-	@echo ======== Adding ASUM scripts and plugins for version $(RPM_VERSION) for RPM packaging.
+	@echo ======== Adding SUM scripts and plugins for version $(RPM_VERSION) for RPM packaging.
 	cp -v ${RPM_SCRIPTS_DIR}/* $(PACKAGE_DIR)/$(TARGET_DIR)
 	cp -Rv $(PLUGINS_LIBRARY) $(PACKAGE_DIR)/$(TARGET_DIR)
 
@@ -105,7 +105,7 @@ generate:
 	pluginTypes=$(PLUGIN_TYPES); \
 	for pt in $${pluginTypes}; do \
 		echo "Generating image for $${pt}..."; \
-		$(TOP)/scripts/pm list -library $(PLUGINS_LIBRARY) -type $${pt} -log-dir $(PLUGINS_LIBRARY)/../imgs/ -log-file $${pt}; \
+		$(TOP)/scripts/sum pm list -library $(PLUGINS_LIBRARY) -type $${pt} -log-dir $(PLUGINS_LIBRARY)/../imgs/ -log-file $${pt}; \
 	done;
 
 	@echo ======== Keeping only plugin graph images and cleaning logs in image dir.
@@ -135,7 +135,7 @@ generate:
 	done; \
 	git add $${readme} $(PLUGINS_LIBRARY)/../imgs/*.svg;
 
-	@echo ======== Calling mkrpm.sh utility to generate the ASUM RPM.
+	@echo ======== Calling mkrpm.sh utility to generate the SUM RPM.
 	cd $(PACKAGE_DIR); \
 	if [ -n "$(SHIP_DIR)" ]; then \
 		export PLATFORM_RPM_LOCATION=$(SHIP_DIR); \
@@ -145,7 +145,7 @@ generate:
 
 .PHONY: clean
 clean: 
-	@echo ======== Removing ASUM RPM artifacts.
+	@echo ======== Removing SUM RPM artifacts.
 	-rm -rf $(PACKAGE_DIR)
 
 

@@ -1,0 +1,40 @@
+{
+  "description": [
+    "Sample multi-line description",
+    "Consumers/GUI can display each item in this list in a separate para with appropriate linebreaks."
+  ],
+  "type": "update",
+  "compatibility-info": [
+    {
+      "product-version": "2.0",
+      "install": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display warning messages and instructions like stopping instances."
+        ],
+        "requires-restart": false,
+        "supports-rollback": false,
+        "estimated-minutes": 25
+      },
+      "rollback": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like roll back requires restarting node, ",
+          "(even though install didn't require restart), as snapshot needs to be reverted."
+        ],
+        "requires-restart": true,
+        "estimated-minutes": 40
+      },
+      "commit": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like once update is committed, you cannot roll back."
+        ],
+        "estimated-minutes": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+- name: Updating task status - system restart
+  hosts: localhost
+  remote_user: root
+  gather_facts: yes
+  vars:
+    web_console_ip: "{{ ansible_local.config.cluster.web_console_ip }}"
+    token: "{{ lookup('file', '/mnt/data/token/host_agent_token.jwt') }}"
+  tasks:
+    - name: Get hostname
+      command: hostname -s
+      register: shortHostname
+
+    - name: Retreive taskID
+      block:
+        - name: Get list of all the tasks
+          uri:
+            url: https://{{ web_console_ip }}//ms/v1/api/tasks
+            method: GET
+            validate_certs: no
+            headers:
+              Content-Type: "application/json"
+              x-auth-token: "{{ token }}"
+          register: tasks
+
+        - name: Fetch taskID of the latest running update task
+          set_fact:
+            taskID: "{{ item.id }}"
+          when:
+            - item != ""
+            - item.state == "InProgress"
+            - item.type == "Update appliance and reboot"
+          with_items: "{{ tasks.json.tasks }}"
+
+    - name: Update task status
+      block:
+      - name: Update the step POST-INSTALL as DONE
+        inframodules:
+          operation: "update-task"
+          taskID: "{{ taskID }}"
+          StepID: "POST-INSTALL"
+          StepStatus: "DONE"
+          TaskMessage: ""
+          TaskPercent: "60"
+
+      - name: Update the step RESTART_NODE step as START
+        inframodules:
+          operation: "update-task"
+          taskID: "{{ taskID }}"
+          StepID: "RESTART_NODE"
+          StepStatus: "START"
+          TaskMessage: "Restarting {{ shortHostname.stdout }}. The restart can take up to 30 minutes. Do not make any configuration changes during this time. Note: An “Unable to contact server” error message may display while the node is restarting. This message does not indicate a failure and can be ignored. You may also be signed out of the Flex Appliance Console. If you are signed out, sign back in after the node has restarted. You can monitor the restart progress from the Veritas Remote Management Interface."
+          TaskPercent: "60"
+      when:
+        - taskID is defined and taskID != ""
