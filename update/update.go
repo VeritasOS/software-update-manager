@@ -1,20 +1,20 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2024 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 package update
 
 import (
 	"flag"
 	"fmt"
-	pm "github.com/VeritasOS/plugin-manager" // import "../plugin-manager"
-	"github.com/VeritasOS/plugin-manager/config"
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
-	"github.com/VeritasOS/plugin-manager/utils/output"
-	"github.com/VeritasOS/software-update-manager/repo"
-	"github.com/VeritasOS/software-update-manager/utils/rpm"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	pm "github.com/VeritasOS/plugin-manager" // import "../plugin-manager"
+	"github.com/VeritasOS/plugin-manager/config"
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/plugin-manager/utils/output"
+	"github.com/VeritasOS/software-update-manager/repo"
+	"github.com/VeritasOS/software-update-manager/utils/rpm"
 )
 
 // RPMInstallRepoPath is the path where RPM contents are expected to installed/extracted.
@@ -33,24 +33,24 @@ type Status struct {
 	// 	continue onto the next operation.
 	// 	Ex: Install can receive auto-reboot=true, in which after installation
 	// 		is completed successfully, `sum` will run reboot operation.
-	Install   []pm.RunStatus `yaml:",omitempty"`
-	Reboot    []pm.RunStatus `yaml:",omitempty"`
-	Rollback  []pm.RunStatus `yaml:",omitempty"`
-	Commit    []pm.RunStatus `yaml:",omitempty"`
+	Install   []pm.Plugin `yaml:",omitempty"`
+	Reboot    []pm.Plugin `yaml:",omitempty"`
+	Rollback  []pm.Plugin `yaml:",omitempty"`
+	Commit    []pm.Plugin `yaml:",omitempty"`
 	Status    string
 	StdOutErr string
 }
 
 // Commit runs the commit-precheck and commit plugins of the update workflow.
 func Commit(result *Status, library string) bool {
-	log.Println("Entering update::Commit")
-	defer log.Println("Exiting update::Commit")
+	logger.Debug.Println("Entering update::Commit")
+	defer logger.Debug.Println("Exiting update::Commit")
 
 	// Plugin Types to run for update workflow as part of user commit action.
 	pluginTypes := []string{"commit-precheck", "commit"}
 
 	for _, pt := range pluginTypes {
-		result.Commit = append(result.Commit, pm.RunStatus{})
+		result.Commit = append(result.Commit, pm.Plugin{})
 		resIdx := len(result.Commit) - 1
 
 		err := runPM(&result.Commit[resIdx], pt, library)
@@ -58,20 +58,22 @@ func Commit(result *Status, library string) bool {
 			return false
 		}
 	}
+	result.Status = dStatusOk
+	output.Write(result)
 	return true
 }
 
 // Install runs the preinstall and install plugins of the update workflow.
 func Install(result *Status, library string) bool {
-	log.Println("Entering update::Install")
-	defer log.Println("Exiting update::Install")
+	logger.Debug.Println("Entering update::Install")
+	defer logger.Debug.Println("Exiting update::Install")
 
 	// Plugin Types to run for update workflow as part of install script.
 	pluginTypes := []string{"preinstall", "install"}
 	var err error
 
 	for _, pt := range pluginTypes {
-		result.Install = append(result.Install, pm.RunStatus{})
+		result.Install = append(result.Install, pm.Plugin{})
 		resIdx := len(result.Install) - 1
 
 		err = runPM(&result.Install[resIdx], pt, library)
@@ -85,27 +87,28 @@ func Install(result *Status, library string) bool {
 		// INFO: Discard rollback errors, and always return false to
 		//  indicate installation failure.
 		pt := "rollback"
-		result.Install = append(result.Install, pm.RunStatus{})
+		result.Install = append(result.Install, pm.Plugin{})
 		resIdx := len(result.Install) - 1
 		runPM(&result.Install[resIdx], pt, library)
 		return false
 	}
 
 	result.Status = dStatusOk
+	output.Write(result)
 	return true
 }
 
 // runCmdFromRPM installs the specified software package from the software repo.
 func runCmdFromRPM(action, swName, swType string, params map[string]string) error {
-	log.Printf("Entering update::runCmdFromRPM(%s, %s, %s, %+v)",
+	logger.Debug.Printf("Entering update::runCmdFromRPM(%s, %s, %s, %+v)",
 		action, swName, swType, params)
-	defer log.Println("Exiting update::runCmdFromRPM")
+	defer logger.Debug.Println("Exiting update::runCmdFromRPM")
 
 	if swName == "" {
-		return logutil.PrintNLogError("Invalid usage. Software name must be specified.")
+		return logger.ConsoleError.PrintNReturnError("Invalid usage. Software name must be specified.")
 	}
 	if swType == "" {
-		return logutil.PrintNLogError("Invalid usage. Software type must be specified.")
+		return logger.ConsoleError.PrintNReturnError("Invalid usage. Software type must be specified.")
 	}
 	swRepo := params["softwareRepo"]
 	if swRepo == "" {
@@ -118,9 +121,8 @@ func runCmdFromRPM(action, swName, swType string, params map[string]string) erro
 
 	fi, err := os.Stat(absSwPath)
 	if err != nil {
-		log.Printf("Unable to stat on %s: %+v. Error: %s\n",
-			absSwPath, fi, err.Error())
-		return logutil.PrintNLogError("Unable to install %s software %s. "+
+		logger.Error.Printf("Unable to stat on %s: %+v, err=%s", absSwPath, fi, err.Error())
+		return logger.ConsoleError.PrintNReturnError("Unable to install %s software %s. "+
 			"Specified software not found.",
 			swType, swName)
 	}
@@ -134,17 +136,13 @@ func runCmdFromRPM(action, swName, swType string, params map[string]string) erro
 	params["softwareType"] = swType
 	listInfo, err := repo.List(params)
 	if err != nil {
-		log.Printf("Failed to repo.List(). Error: %s\n",
-			err.Error())
+		logger.Error.Printf("Failed to repo.List(), err=%s", err.Error())
 		return err
 	}
 	// Since we had passed softwareName, there is expected to be only one in the list, so get that.
 	if 1 != len(listInfo) {
-		log.Printf("The repo list is expected to have details of %s software, "+
-			"but got %+v.",
-			swName, listInfo)
-		return logutil.PrintNLogError("Failed to get details of %s software.",
-			swName)
+		logger.Error.Printf("The repo list is expected to have details of %s software, but got %+v.", swName, listInfo)
+		return logger.ConsoleError.PrintNReturnError("Failed to get details of %s software.", swName)
 	}
 	rpmInfo := listInfo[0]
 
@@ -159,7 +157,7 @@ func runCmdFromRPM(action, swName, swType string, params map[string]string) erro
 
 		err = rpm.Install(absSwPath)
 		if err != nil {
-			return logutil.PrintNLogError("Failed to install software.")
+			return logger.ConsoleError.PrintNReturnError("Failed to install software.")
 		}
 	}
 
@@ -167,40 +165,38 @@ func runCmdFromRPM(action, swName, swType string, params map[string]string) erro
 		fmt.Sprintf("%s-%s-%s", rpmInfo.GetRPMName(),
 			rpmInfo.GetRPMVersion(), rpmInfo.GetRPMRelease()) +
 		string(os.PathSeparator) + action
-	log.Println("Script to be invoked:", script)
+	logger.Info.Println("Script to be invoked:", script)
 
 	const cmdStr = "/bin/sh"
 	cmdParams := []string{script, "-output-file", output.GetFile(),
 		"-output-format", output.GetFormat()}
 	cmd := exec.Command(os.ExpandEnv(cmdStr), cmdParams...)
 	stdOutErr, err := cmd.CombinedOutput()
-	log.Println("Stdout & Stderr:", string(stdOutErr))
+	logger.Debug.Println("Stdout & Stderr:", string(stdOutErr))
 	if err != nil {
-		log.Printf("Failed to run %s script of %s RPM. Error: %s\n",
-			script, absSwPath, err.Error())
+		logger.Error.Printf("Failed to run %s script of %s RPM, err=%s", script, absSwPath, err.Error())
 		if "install" == action {
 			rpm.Uninstall(rpmInfo.GetRPMName())
 		}
-		return logutil.PrintNLogError("Failed to %s software.", action)
+		return logger.ConsoleError.PrintNReturnError("Failed to %s software.", action)
 	}
 
-	log.Printf("Successfully completed %s of %s software", action, absSwPath)
-	logutil.PrintNLog("Successfully completed %s of %s software %s from repository.\n",
+	logger.Info.Printf("Successfully completed %s of %s software", action, absSwPath)
+	logger.ConsoleInfo.Printf("Successfully completed %s of %s software %s from repository.\n",
 		action, swType, swName)
 	return nil
 }
 
-// Reboot runs the prereboot plugins and reboot the system as part of the
-// 	update workflow.
+// Reboot runs the prereboot plugins and reboot the system as part of the update workflow.
 func Reboot(result *Status, library string) bool {
-	log.Println("Entering update::Reboot")
-	defer log.Println("Exiting update::Reboot")
+	logger.Debug.Println("Entering update::Reboot")
+	defer logger.Debug.Println("Exiting update::Reboot")
 
 	// Plugin Types to run for update workflow as part of prereboot script.
 	pluginTypes := []string{"prereboot"}
 
 	for _, pt := range pluginTypes {
-		result.Reboot = append(result.Reboot, pm.RunStatus{})
+		result.Reboot = append(result.Reboot, pm.Plugin{})
 		resIdx := len(result.Reboot) - 1
 
 		err := runPM(&result.Reboot[resIdx], pt, library)
@@ -210,13 +206,15 @@ func Reboot(result *Status, library string) bool {
 			// INFO: Discard rollback errors, and always return false to
 			//  indicate reboot failure.
 			pt := "rollback"
-			result.Reboot = append(result.Reboot, pm.RunStatus{})
+			result.Reboot = append(result.Reboot, pm.Plugin{})
 			resIdx := len(result.Reboot) - 1
 
 			runPM(&result.Reboot[resIdx], pt, library)
 			return false
 		}
 	}
+	result.Status = dStatusOk
+	output.Write(result)
 
 	// Reboot the system after prereboot plugins are run successfully.
 	cmdStr := "systemctl"
@@ -224,44 +222,40 @@ func Reboot(result *Status, library string) bool {
 
 	cmd := exec.Command(os.ExpandEnv(cmdStr), cmdParams...)
 	stdOutErr, err := cmd.CombinedOutput()
-	log.Println("Stdout & Stderr:", string(stdOutErr))
+	logger.Debug.Println("Stdout & Stderr:", string(stdOutErr))
 	if err != nil {
-		log.Printf("Failed to reboot the system. Error: %s\n", err.Error())
-		result.StdOutErr = "Failed to reboot the system."
-		return false
+		logger.Error.Printf("Failed to reboot the system, err=%s", err.Error())
 	}
 
 	return true
 }
 
-func runPM(result *pm.RunStatus, pluginType, library string) error {
-	log.Println("Entering update::runPM")
-	defer log.Println("Exiting update::runPM")
+func runPM(result *pm.Plugin, pluginType, library string) error {
+	logger.Debug.Println("Entering update::runPM")
+	defer logger.Debug.Println("Exiting update::runPM")
 
-	logutil.PrintNLog("Running %s plugins...", pluginType)
+	logger.ConsoleInfo.Printf("Running %s plugins...", pluginType)
 	config.SetPluginsLibrary(library)
 
-	err := pm.Run(result, pluginType)
+	err := pm.RunFromLibrary(result, pluginType, pm.RunOptions{Library: library})
 	if err != nil {
-		log.Printf("Failed to run %s plugins. Error: %s\n",
-			pluginType, err.Error())
+		logger.Error.Printf("Failed to run %s plugins, err=%s", pluginType, err.Error())
 		return err
 	}
 	fmt.Println()
 	return nil
 }
 
-// Rollback runs the required rollback plugins of the update workflow in the
-// 	new version/partition.
+// Rollback runs the required rollback plugins of the update workflow in the new version/partition.
 func Rollback(result *Status, library string) bool {
-	log.Println("Entering update::Rollback")
-	defer log.Println("Exiting update::Rollback")
+	logger.Debug.Println("Entering update::Rollback")
+	defer logger.Debug.Println("Exiting update::Rollback")
 
 	// Plugin Types to run for update workflow as part of rollback script.
 	pluginTypes := []string{"rollback-precheck", "prerollback"}
 
 	for _, pt := range pluginTypes {
-		result.Rollback = append(result.Rollback, pm.RunStatus{})
+		result.Rollback = append(result.Rollback, pm.Plugin{})
 		resIdx := len(result.Rollback) - 1
 
 		err := runPM(&result.Rollback[resIdx], pt, library)
@@ -270,6 +264,7 @@ func Rollback(result *Status, library string) bool {
 		}
 	}
 	result.Status = dStatusOk
+	output.Write(result)
 	return true
 }
 
@@ -320,8 +315,8 @@ func registerCmdOptions(f *flag.FlagSet) {
 
 // registerCommandCommit registers install command and its options
 func registerCommandCommit(progname string) {
-	log.Printf("Entering update::registerCommandCommit(%s)", progname)
-	defer log.Println("Exiting update::registerCommandCommit")
+	logger.Debug.Printf("Entering update::registerCommandCommit(%s)", progname)
+	defer logger.Debug.Println("Exiting update::registerCommandCommit")
 
 	cmdOptions.commitCmd = flag.NewFlagSet(progname+" commit", flag.PanicOnError)
 	registerCmdOptions(cmdOptions.commitCmd)
@@ -329,8 +324,8 @@ func registerCommandCommit(progname string) {
 
 // registerCommandInstall registers install command and its options
 func registerCommandInstall(progname string) {
-	log.Printf("Entering update::registerCommandInstall(%s)", progname)
-	defer log.Println("Exiting update::registerCommandInstall")
+	logger.Debug.Printf("Entering update::registerCommandInstall(%s)", progname)
+	defer logger.Debug.Println("Exiting update::registerCommandInstall")
 
 	cmdOptions.installCmd = flag.NewFlagSet(progname+" install", flag.PanicOnError)
 	registerCmdOptions(cmdOptions.installCmd)
@@ -338,8 +333,8 @@ func registerCommandInstall(progname string) {
 
 // registerCommandReboot registers reboot command and its options
 func registerCommandReboot(progname string) {
-	log.Printf("Entering update::registerCommandReboot(%s)", progname)
-	defer log.Println("Exiting update::registerCommandReboot")
+	logger.Info.Printf("Entering update::registerCommandReboot(%s)", progname)
+	defer logger.Info.Println("Exiting update::registerCommandReboot")
 
 	cmdOptions.rebootCmd = flag.NewFlagSet(progname+" reboot", flag.PanicOnError)
 	registerCmdOptions(cmdOptions.rebootCmd)
@@ -347,8 +342,8 @@ func registerCommandReboot(progname string) {
 
 // registerCommandRollback registers rollback command and its options
 func registerCommandRollback(progname string) {
-	log.Printf("Entering update::registerCommandRollback(%s)", progname)
-	defer log.Println("Exiting update::registerCommandRollback")
+	logger.Debug.Printf("Entering update::registerCommandRollback(%s)", progname)
+	defer logger.Debug.Println("Exiting update::registerCommandRollback")
 
 	cmdOptions.rollbackCmd = flag.NewFlagSet(progname+" rollback", flag.PanicOnError)
 	registerCmdOptions(cmdOptions.rollbackCmd)
@@ -356,8 +351,8 @@ func registerCommandRollback(progname string) {
 
 // RegisterCommandOptions registers the command options that are supported
 func RegisterCommandOptions(progname string) {
-	log.Println("Entering update::RegisterCommandOptions")
-	defer log.Println("Exiting update::RegisterCommandOptions")
+	logger.Debug.Println("Entering update::RegisterCommandOptions")
+	defer logger.Debug.Println("Exiting update::RegisterCommandOptions")
 
 	registerCommandCommit(progname)
 	registerCommandInstall(progname)
@@ -368,13 +363,13 @@ func RegisterCommandOptions(progname string) {
 // ScanCommandOptions scans for the command line options and makes appropriate
 // function call.
 // Input:
-// 	1. map[string]interface{}
-//    where, the options could be following:
-// 		"progname":  Name of the program along with any cmds (ex: sum pm)
-// 		"cmd-index": Index to the cmd (ex: run)
+//  1. map[string]interface{}
+//     where, the options could be following:
+//     "progname":  Name of the program along with any cmds (ex: sum pm)
+//     "cmd-index": Index to the cmd (ex: run)
 func ScanCommandOptions(options map[string]interface{}) error {
-	log.Printf("Entering ScanCommandOptions(%+v)...", options)
-	defer log.Println("Exiting ScanCommandOptions")
+	logger.Debug.Printf("Entering ScanCommandOptions(%+v)...", options)
+	defer logger.Debug.Println("Exiting ScanCommandOptions")
 
 	progname := filepath.Base(os.Args[0])
 	cmdIndex := 1
@@ -385,7 +380,7 @@ func ScanCommandOptions(options map[string]interface{}) error {
 		cmdIndex = valI.(int)
 	}
 	cmd := os.Args[cmdIndex]
-	log.Println("progname: ", progname, " cmd with arguments: ", os.Args[cmdIndex:])
+	logger.Debug.Println("Progname: ", progname, " cmd with arguments: ", os.Args[cmdIndex:])
 
 	var err error
 	switch cmd {
@@ -418,7 +413,7 @@ func ScanCommandOptions(options map[string]interface{}) error {
 	}
 
 	if err != nil {
-		return logutil.PrintNLogError(cmd, "command arguments parse error:", err.Error())
+		return logger.ConsoleError.PrintNReturnError("Command arguments parse error, cmd=%s, err=%s", cmd, err.Error())
 	}
 
 	if cmdOptions.softwareName != "" {
@@ -440,16 +435,12 @@ func ScanCommandOptions(options map[string]interface{}) error {
 		case "rollback":
 			ret = Rollback(&status, library)
 		}
-		if ret {
-			status.Status = dStatusOk
-		} else {
-			err = logutil.PrintNLogError("Failed to %s the update.", cmd)
+		if !ret {
+			err = logger.ConsoleError.PrintNReturnError("Failed to %s the update.", cmd)
 			status.Status = dStatusFail
 			status.StdOutErr = err.Error()
+			output.Write(status)
 		}
-
-		output.Write(status)
-
 	}
 	return err
 }

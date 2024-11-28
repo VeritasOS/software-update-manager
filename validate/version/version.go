@@ -1,19 +1,21 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2022 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 package version
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
 )
 
 // V1VersionInfo would be decoded from the V1VersionInfo JSON array.
 type V1VersionInfo struct {
-	Version  string `json:"Version"`
-	Reboot   string `json:"Reboot"`
-	Estimate struct {
+	Description []string `json:"Description"`
+	Version     string   `json:"Version"`
+	Reboot      string   `json:"Reboot"`
+	Estimate    struct {
 		Hours   string `json:"hours"`
 		Minutes string `json:"minutes"`
 		Seconds string `json:"seconds"`
@@ -21,10 +23,11 @@ type V1VersionInfo struct {
 }
 
 // Compare checks whether the specified version (with '*' patterns)
-// 	matches the given product version.
+//
+//	matches the given product version.
 func Compare(productVersion string, version string) bool {
-	log.Printf("Entering version::Compare(%s, %s)", productVersion, version)
-	defer log.Println("Exiting version::Compare")
+	logger.Debug.Printf("Entering version::Compare(%s, %s)", productVersion, version)
+	defer logger.Debug.Println("Exiting version::Compare")
 
 	var num1, num2 string
 	productVersionNums := strings.Split(productVersion, ".")
@@ -54,15 +57,15 @@ func Compare(productVersion string, version string) bool {
 }
 
 func validateJSONFormat(versionInfoString string) ([]V1VersionInfo, error) {
-	log.Printf("Entering version::validateJSONFormat(%s)...",
+	logger.Debug.Printf("Entering version::validateJSONFormat(%s)...",
 		versionInfoString)
-	defer log.Printf("Exiting version::validateJSONFormat...")
+	defer logger.Debug.Printf("Exiting version::validateJSONFormat...")
 
 	versionInfoArray := make([]V1VersionInfo, 0)
 
 	err := json.Unmarshal([]byte(versionInfoString), &versionInfoArray)
 	if err != nil {
-		log.Printf("json.Unmarshal(%s, %v); Error: %s",
+		logger.Error.Printf("Failed to call json.Unmarshal(%s, %v), err=%s",
 			versionInfoString, &versionInfoArray, err.Error())
 		err = fmt.Errorf("RPM V1VersionInfo is not in valid JSON format: %v", err)
 		return versionInfoArray, err
@@ -71,19 +74,17 @@ func validateJSONFormat(versionInfoString string) ([]V1VersionInfo, error) {
 }
 
 func validateVersion(productVersion string, versionInfoArray []V1VersionInfo) (V1VersionInfo, error) {
-	log.Printf("Entering version::validateVersion(%s, %s)...",
+	logger.Debug.Printf("Entering version::validateVersion(%s, %s)...",
 		productVersion, versionInfoArray)
-	defer log.Println("Exiting version::validateVersion")
+	defer logger.Debug.Println("Exiting version::validateVersion")
 
 	versionSet := map[string]bool{}
 	info := V1VersionInfo{}
 
 	for _, versionInfo := range versionInfoArray {
 		if versionSet[versionInfo.Version] {
-			err := fmt.Errorf("Update version is not compatible for "+
-				"the product version %v.", productVersion)
-			log.Printf("Error in ValidateVersion: %s",
-				err)
+			err := fmt.Errorf("updating version is not compatible for the product version %v", productVersion)
+			logger.Error.Printf("Validating version failed, err=%v", err)
 			return info, err
 		}
 		versionSet[versionInfo.Version] = true
@@ -97,12 +98,10 @@ func validateVersion(productVersion string, versionInfoArray []V1VersionInfo) (V
 			info = versionInfo
 		}
 	}
-
-	if (info == V1VersionInfo{}) {
-		err := fmt.Errorf("Update version is not "+
-			"compatible for the product version %s.", productVersion)
-		log.Printf("Error in ValidateVersion: %s",
-			err)
+	if (info.Version == V1VersionInfo{}.Version) {
+		err := fmt.Errorf("update version is not "+
+			"compatible for the product version %s", productVersion)
+		logger.Error.Printf("Validating version failed, err=%v", err)
 
 		return V1VersionInfo{}, err
 	}
@@ -111,11 +110,12 @@ func validateVersion(productVersion string, versionInfoArray []V1VersionInfo) (V
 }
 
 // GetCompatibileVersionInfo checks whether the product version is in the
-// 	compatibility list, and returns version info for that product version.
+//
+//	compatibility list, and returns version info for that product version.
 func GetCompatibileVersionInfo(productVersion, versionInfoString string) (V1VersionInfo, error) {
-	log.Printf("Entering version::GetCompatibileVersionInfo(%s, %s)...",
+	logger.Debug.Printf("Entering version::GetCompatibileVersionInfo(%s, %s)...",
 		productVersion, versionInfoString)
-	defer log.Printf("Exiting version::GetCompatibileVersionInfo...")
+	defer logger.Debug.Printf("Exiting version::GetCompatibileVersionInfo...")
 
 	info := V1VersionInfo{}
 	versionInfoArray, err := validateJSONFormat(versionInfoString)

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2022 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 package version
 
@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
 )
 
 func TestCompare(t *testing.T) {
@@ -64,6 +66,8 @@ func TestCompare(t *testing.T) {
 			want: true,
 		},
 	}
+	// Set log file name to "test", so that cleaning becomes easier.
+	logger.InitFileLogger("test.log", "INFO")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Compare(tt.args.productVersion, tt.args.version); got != tt.want {
@@ -138,7 +142,8 @@ func Test_validateVersion(t *testing.T) {
 			wantErr:        true,
 		},
 	}
-
+	// Set log file name to "test", so that cleaning becomes easier.
+	logger.InitFileLogger("test.log", "INFO")
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			versionInfo := make([]V1VersionInfo, 0)

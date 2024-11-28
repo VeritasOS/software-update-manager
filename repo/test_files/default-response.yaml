@@ -1,0 +1,29 @@
+- name: VRTSflex-update
+  filename: VRTSflex-update-3.2.rpm
+  description:
+  - This release is primarily comprised of performance improvements and minor bug
+    fixes.
+  - Stop or relocate all running instances before you start the update on each node.
+  - 'Note: If you choose to roll back after the update, you must stop all instances
+    on all nodes.'
+  type: update
+  url: https://www.veritas.com/support/en_US/doc/130821112-145890001-0
+  version: "3.2"
+  release: "20230314183059"
+  install:
+    confirmation-message:
+    - Make sure you've stopped or relocated the instances before you start the update.
+    estimated-minutes: 90
+    requires-restart: true
+    supports-precheck: false
+    supports-rollback: true
+  rollback:
+    confirmation-message:
+    - You must stop the instances on all appliance nodes before you start the rollback.
+      The rollback requires a restart because the snapshot needs to be reverted.
+    estimated-minutes: 40
+    requires-restart: true
+  commit:
+    confirmation-message:
+    - Once the update is committed, you cannot roll back.
+    estimated-minutes: 5
