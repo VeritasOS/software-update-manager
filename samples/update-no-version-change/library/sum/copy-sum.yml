@@ -1,0 +1,61 @@
+# Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+- name: "Install latest Software Update Manager."
+  hosts: localhost
+  remote_user: root
+  gather_facts: yes
+  vars:
+    web_console_ip: "{{ ansible_local.config.cluster.web_console_ip }}"
+    token: "{{ lookup('file', '/mnt/data/token/host_agent_token.jwt') }}"
+  tasks:
+    - name: Retreive taskID
+      block:
+        - name: Get list of all the tasks
+          uri:
+            url: https://{{ web_console_ip }}//ms/v1/api/tasks
+            method: GET
+            validate_certs: no
+            headers:
+              Content-Type: "application/json"
+              x-auth-token: "{{ token }}"
+          register: tasks
+
+        - name: Fetch taskID of the latest running update task
+          set_fact:
+            taskID: "{{ item.id }}"
+          when:
+            - item != ""
+            - item.state == "InProgress"
+            - item.type == "Update node"
+          with_items: "{{ tasks.json.tasks }}"
+
+    - name: Update task status
+      block:
+      - name: Inform about action
+        inframodules:
+          operation: "update-task"
+          taskID: "{{ taskID }}"
+          StepID: "INSTALL"
+          TaskMessage: "Installing latest Software Update Manager."
+          TaskPercent: "60"
+      when:
+        - taskID is defined and taskID != ""
+
+    - name: Copy a new "Software Update Manager (SUM)" file into place, backing up the original if it differs from the copied version
+      ansible.builtin.copy:
+        src: "{{ lookup('env', 'PM_LIBRARY') }}/../sum"
+        dest: /opt/veritas/appliance/bin/
+        # owner: root
+        # group: root
+        mode: '0655'
+        backup: yes      
+
+    - name: Update task status - Update successful
+      inframodules:
+        operation: update-task
+        taskID: "{{ taskID }}"
+        StepID: "INSTALL"
+        StepStatus: "DONE"
+        TaskPercent: "100"
+        TaskMessage: |
+          Node was updated successfully.

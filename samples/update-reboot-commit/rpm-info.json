@@ -1,0 +1,43 @@
+{
+  "description": [
+    "This update RPM, updates the version of the node and reboots.",
+    "",
+    "Prerequisite: Any online application instances should be stopped first. Otherwise, update fails asking one to stop instances.",
+    ""
+  ],
+  "type": "update",
+  "compatibility-info": [
+    {
+      "product-version": "2.0.0.*",
+      "install": {
+        "confirmation-message": [
+          "Any online application instances should be stopped first.",
+          "",
+          "After update is installed, the node will be restarted, and the Web console may not be accessible for up to 10 mins.",
+          "You can monitor the progress of the restart via IPMI console."
+        ],
+        "requires-restart": true,
+        "supports-rollback": false,
+        "estimated-minutes": 25
+      },
+      "rollback": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like roll back requires restarting node, ",
+          "(even though install didn't require restart), as snapshot needs to be reverted."
+        ],
+        "requires-restart": true,
+        "estimated-minutes": 40
+      },
+      "commit": {
+        "confirmation-message": [
+          "Sample multi-line confirmation message",
+          "",
+          "Display info messages and instructions like once update is committed, you cannot roll back."
+        ],
+        "estimated-minutes": 5
+      }
+    }
+  ]
+}

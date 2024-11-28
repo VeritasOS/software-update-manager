@@ -1,8 +1,8 @@
 # Update plugins' and its dependencies
 
-The document lists the plugins that are bundled into the update RPM using [ĀSUM SDK](https://stash.veritas.com/projects/AS/repos/platformx/browse/asum/sdk/README.md).
+The document lists the plugins that are bundled into the update RPM using [SUM SDK](https://github.com/VeritasOS/software-update-manager/blob/v1/sdk/README.md).
 
-The update framework workflow details can be found in here: [ĀSUM update framework](https://stash.veritas.com/projects/AS/repos/platformx/browse/asum/docs/update.md).
+The update framework workflow details can be found in here: [SUM update framework](https://github.com/VeritasOS/software-update-manager/blob/v1/README.md).
 
 > NOTES
 

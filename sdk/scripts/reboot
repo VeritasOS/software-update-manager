@@ -9,7 +9,7 @@ myDir=$(dirname ${myprg})
 export VXAPP_UPGRADE_ROOT="/system/upgrade/volume/"
 
 echo "Restarting the node to continue with the update installation..."
-${myDir}/asum reboot "$@"
+${myDir}/sum reboot "$@"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to restart the node."
     exit 1

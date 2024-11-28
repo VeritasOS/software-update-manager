@@ -1,24 +1,26 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2022 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 // Package repo defines software repository functions like listing, removing
-// 	packages from software repository.
+//
+//	packages from software repository.
 package repo
 
 import (
 	"flag"
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
-	osutils "github.com/VeritasOS/plugin-manager/utils/os"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
+	osutils "github.com/VeritasOS/plugin-manager/utils/os"
 )
 
 // registerCommandRemove registers the remove command that enables one to
-// 	remove the RPM of the specified type from the software update repository.
+//
+//	remove the RPM of the specified type from the software update repository.
 func registerCommandRemove(progname string) {
-	log.Printf("Entering repo::registerCommandRemove(%s)", progname)
-	defer log.Println("Exiting repo::registerCommandRemove")
+	logger.Debug.Printf("Entering repo::registerCommandRemove(%s)", progname)
+	defer logger.Debug.Println("Exiting repo::registerCommandRemove")
 
 	cmdOptions.removeCmd = flag.NewFlagSet(progname+" remove", flag.PanicOnError)
 	cmdOptions.removeCmd.StringVar(
@@ -43,16 +45,16 @@ func registerCommandRemove(progname string) {
 
 // Remove the specified software package from the software repo.
 func Remove(swName, swType, swRepo string) error {
-	log.Printf("Entering repo::Remove(%s, %s, %s)", swName, swType, swRepo)
-	defer log.Println("Exiting repo::Remove")
+	logger.Debug.Printf("Entering repo::Remove(%s, %s, %s)", swName, swType, swRepo)
+	defer logger.Debug.Println("Exiting repo::Remove")
 
 	if swRepo == "" {
-		return logutil.PrintNLogError("Unable to remove %s software %s. "+
+		return logger.ConsoleError.PrintNReturnError("Unable to remove %s software %s. "+
 			"Failed to determine software repository.",
 			swType, swName)
 	}
 	if swName != "" && swType == "" {
-		return logutil.PrintNLogError("Invalid usage. Software type must be specified when software name is specified.")
+		return logger.ConsoleError.PrintNReturnError("Invalid usage. Software type must be specified when software name is specified.")
 	}
 
 	absSwPath := filepath.Clean(filepath.FromSlash(swRepo +
@@ -61,23 +63,21 @@ func Remove(swName, swType, swRepo string) error {
 
 	fi, err := os.Stat(absSwPath)
 	if err != nil {
-		log.Printf("Unable to stat on %s: %+v. Error: %s\n",
-			absSwPath, fi, err.Error())
-		return logutil.PrintNLogError("Unable to remove %s software %s. "+
+		logger.Error.Printf("Unable to stat on %s: %+v, err=%s", absSwPath, fi, err.Error())
+		return logger.ConsoleError.PrintNReturnError("Unable to remove %s software %s. "+
 			"Specified software not found.",
 			swType, swName)
 	}
 
 	err = osutils.OsRemoveAll(absSwPath)
 	if err != nil {
-		log.Printf("Unable to remove on %s. Error: %s\n",
-			absSwPath, err.Error())
-		return logutil.PrintNLogError("Failed to remove %s software %s.",
+		logger.Error.Printf("Unable to remove on %s, err=%s", absSwPath, err.Error())
+		return logger.ConsoleError.PrintNReturnError("Failed to remove %s software %s.",
 			swType, swName)
 	}
 
-	log.Printf("Successfully removed %s software", absSwPath)
-	logutil.PrintNLog("Successfully removed %s software %s from repository.\n",
+	logger.Info.Printf("Successfully removed %s software", absSwPath)
+	logger.ConsoleInfo.Printf("Successfully removed %s software %s from repository.",
 		swType, swName)
 	return nil
 }

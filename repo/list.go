@@ -1,29 +1,39 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2024 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 // Package repo defines software repository functions like listing, removing
-// 	packages from software repository.
+// packages from software repository.
 package repo
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
-	"github.com/VeritasOS/plugin-manager/utils/output"
-	"github.com/VeritasOS/software-update-manager/utils/rpm"
-	"github.com/VeritasOS/software-update-manager/validate/version"
+	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
-	"gopkg.in/yaml.v2"
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/plugin-manager/utils/output"
+	"github.com/VeritasOS/software-update-manager/utils/rpm"
+	"github.com/VeritasOS/software-update-manager/validate/version"
+
+	"gopkg.in/yaml.v3"
 )
 
 // FormatVersionName is the ASUM RPM format version string that's embedded
-// 	into RPM used for identifying the JSON format version.
+// into RPM used for identifying the JSON format version.
 const FormatVersionName = "ASUM RPM Format Version"
+
+var (
+	fGetRPMPackageInfo = rpm.GetRPMPackageInfo
+	fGetChecksum       = getChecksum
+	fListRepo          = listRepo
+	fListRPMFilesInfo  = ListRPMFilesInfo
+	fOpen              = os.Open
+)
 
 // RPMInfo is the list of RPM package info
 type RPMInfo interface {
@@ -37,12 +47,13 @@ type RPMInfo interface {
 // Version 2 RPM Information related fields & helper functions below:
 
 // v2productVersion is the details for a given product-version from the
-// 	version compatibility matrix/info JSON.
+// version compatibility matrix/info JSON.
 type v2productVersion struct {
 	Install struct {
 		ConfirmationMessage []string `yaml:"confirmation-message"`
 		EstimatedMinutes    uint     `yaml:"estimated-minutes"`
 		RequiresRestart     bool     `yaml:"requires-restart"`
+		SupportsPrecheck    bool     `yaml:"supports-precheck"`
 		SupportsRollback    bool     `yaml:"supports-rollback"`
 	} `yaml:",omitempty"`
 	Rollback struct {
@@ -61,17 +72,15 @@ type v2RPMInfo struct {
 	// Name of the RPM
 	Name string
 	// RPM file name
-	FileName    string
-	Description []string
-	Type        string
-	URL         string
-	Version     string
-	Release     string
-	// NOTE: The time.Time value is getting chopped off while dumping output
-	// 	in json at ansible layer causing json unmarshal failure at consumer.
-	// 	so commenting for now.
-	// BuildDate   time.Time
-
+	FileName         string
+	Description      []string
+	Type             string
+	URL              string
+	Version          string
+	Release          string
+	Checksum         string `yaml:"checksum,omitempty"`
+	DisplayType      string `yaml:"display-type,omitempty"`
+	BuildDate        string
 	matchedVersion   string
 	v2productVersion `yaml:",inline"`
 }
@@ -97,7 +106,7 @@ func (v2 v2RPMInfo) GetRPMVersion() string {
 }
 
 // GetMatchedVersion retrives the supported product-version from
-// 	version compatibility matrix.
+// version compatibility matrix.
 func (v2 v2RPMInfo) GetMatchedVersion() string {
 	return v2.matchedVersion
 }
@@ -106,7 +115,7 @@ func (v2 v2RPMInfo) GetMatchedVersion() string {
 
 // v1RPMInfo is the list of RPM package info
 type v1RPMInfo struct {
-	Description string `yaml:"description"`
+	Description []string `yaml:"description"`
 	Estimate    struct {
 		Hours   string `yaml:"hours"`
 		Minutes string `yaml:"minutes"`
@@ -121,6 +130,8 @@ type v1RPMInfo struct {
 	Type           string `yaml:"type"`
 	URL            string `yaml:"url"`
 	Version        string `yaml:"version"`
+	Checksum       string `yaml:"checksum,omitempty"`
+	Release        string `yaml:"release"`
 }
 
 // GetRPMName returns the name of the RPM.
@@ -130,8 +141,7 @@ func (v1 v1RPMInfo) GetRPMName() string {
 
 // GetRPMRelease returns the release number of the RPM.
 func (v1 v1RPMInfo) GetRPMRelease() string {
-	// v1 doesn't support displaying release number, so return empty.
-	return ""
+	return v1.Release
 }
 
 // GetRPMType returns the type of the RPM.
@@ -145,40 +155,28 @@ func (v1 v1RPMInfo) GetRPMVersion() string {
 }
 
 // GetMatchedVersion retrives the supported product-version from
-// 	version compatibility matrix.
+// version compatibility matrix.
 func (v1 v1RPMInfo) GetMatchedVersion() string {
 	return v1.matchedVersion
 }
 
-func parseDate(rawDate string) (time.Time, error) {
-	const dateLayout = "Mon 02 Jan 2006 03:04:05 PM MST"
-	t, err := time.Parse(dateLayout, rawDate)
-	if err != nil {
-		// INFO: On few systems, the build date appeared in
-		// 	ANSIC layout, so, try parsing with that.
-		t, err = time.Parse(time.ANSIC, rawDate)
-	}
-	if err != nil {
-		log.Printf("Failed to parse date: %s. Error: %s\n", rawDate, err)
-	}
-	return t, err
-}
-
 // List the packages present in the software repo along with their details.
 func List(params map[string]string) ([]RPMInfo, error) {
-	log.Printf("Entering repo::List(%v)", params)
-	defer log.Println("Exiting repo::List")
+	logger.Debug.Printf("Entering repo::List(%v)", params)
+	defer logger.Debug.Println("Exiting repo::List")
 
 	productVersion := params["productVersion"]
 
 	var info []RPMInfo
 
-	files, err := listRepo(params)
+	files, err := fListRepo(params)
 	if err != nil {
 		return info, err
 	}
+	includeFields := params["includeFields"]
+	m := strings.Split(includeFields, ",")
 
-	info, err = ListRPMFilesInfo(files, productVersion)
+	info, err = fListRPMFilesInfo(files, productVersion, m...)
 	if err != nil {
 		return info, err
 	}
@@ -189,8 +187,8 @@ func List(params map[string]string) ([]RPMInfo, error) {
 }
 
 func listRepo(params map[string]string) ([]string, error) {
-	log.Printf("Entering repo::listRepo(%v)", params)
-	defer log.Println("Exiting repo::listRepo")
+	logger.Debug.Printf("Entering repo::listRepo(%v)", params)
+	defer logger.Debug.Println("Exiting repo::listRepo")
 
 	swName := params["softwareName"]
 	swRepo := params["softwareRepo"]
@@ -205,26 +203,24 @@ func listRepo(params map[string]string) ([]string, error) {
 		swTypes = append(swTypes, swType)
 	} else {
 		if _, err := os.Stat(swRepo); os.IsNotExist(err) {
-			logutil.PrintNLogWarning("Software repository '%s' does not exist.",
-				swRepo)
+			logger.ConsoleWarning.Printf("Software repository '%s' does not exist.", swRepo)
 			return files, nil
 		}
 		dirs, err := ioutil.ReadDir(swRepo)
 		if err != nil {
-			log.Printf("ioutil.ReadDir(%s); Error: %s", swRepo, err.Error())
-			return files, logutil.PrintNLogError("Failed to get contents of software repository.")
+			logger.Error.Printf("ioutil.ReadDir(%s); err=%s", swRepo, err.Error())
+			return files, logger.ConsoleError.PrintNReturnError("Failed to get contents of software repository.")
 		}
 
 		for _, dir := range dirs {
 			curDir := filepath.FromSlash(swRepo + "/" + dir.Name())
 			fi, err := os.Stat(curDir)
 			if err != nil {
-				log.Printf("Unable to stat on %s directory. Error: %s\n",
-					dir, err.Error())
+				logger.Error.Printf("Unable to stat on %s directory. err=%s", dir, err.Error())
 				continue
 			}
 			if !fi.IsDir() {
-				log.Printf("%s is not a directory.\n", curDir)
+				logger.Error.Printf("%s is not a directory.", curDir)
 				continue
 			}
 
@@ -237,15 +233,15 @@ func listRepo(params map[string]string) ([]string, error) {
 
 		tfiles, err := ioutil.ReadDir(curDir)
 		if err != nil {
-			log.Printf("Unable to read contents of %s directory. Error: %s\n",
+			logger.Error.Printf("Unable to read contents of %s directory. err=%s\n",
 				curDir, err.Error())
 		}
-		log.Printf("%s files: %v", dir, tfiles)
+		logger.Debug.Printf("%s files: %v", dir, tfiles)
 		for _, tf := range tfiles {
-			log.Printf("Package: %v", tf)
+			logger.Debug.Printf("Package: %v", tf)
 			matched, err := regexp.MatchString("[.]rpm$", tf.Name())
 			if err != nil {
-				log.Printf("regexp.MatchString(%s, %s); Error: %s",
+				logger.Error.Printf("regexp.MatchString(%s, %s); err=%s",
 					"[.]rpm", tf.Name(), err.Error())
 				continue
 			}
@@ -264,41 +260,79 @@ func listRepo(params map[string]string) ([]string, error) {
 	return files, nil
 }
 
+func getChecksum(src io.Reader) string {
+	h := sha256.New()
+	if _, err := io.Copy(h, src); err != nil {
+		logger.ConsoleError.PrintNReturnError("Failed to get RPM file checksum. Error: [%v]", err.Error())
+	}
+	return hex.EncodeToString(h.Sum(nil))
+
+}
+
 // ListRPMFilesInfo lists the info of the RPM files.
-func ListRPMFilesInfo(files []string, productVersion string) ([]RPMInfo, error) {
-	log.Printf("Entering repo::ListRPMFilesInfo(%v, %v)", files, productVersion)
-	defer log.Println("Exiting repo::ListRPMFilesInfo")
+// includeFields is a comma separated values you can provide to include extra fields other than default fields.
+// As of now only "checksum" is extra field you can populate.
+// If you are adding new field please make sure it should not be populated by default
+// you need to use --include-fields flag. Other wise
+// if you add new field in response then response time of ListRPMFilesInfo function may increase
+func ListRPMFilesInfo(files []string, productVersion string, includeFields ...string) ([]RPMInfo, error) {
+	logger.Debug.Printf("Entering repo::ListRPMFilesInfo(%v, %v)", files, productVersion)
+	defer logger.Debug.Println("Exiting repo::ListRPMFilesInfo")
 
 	var info []RPMInfo
 	for _, file := range files {
-		metaData, err := rpm.GetRPMPackageInfo(filepath.FromSlash(file))
+		metaData, err := fGetRPMPackageInfo(filepath.FromSlash(file))
 		if err != nil {
-			return info, logutil.PrintNLogError("Failed to get software details.")
+			return info, logger.ConsoleError.PrintNReturnError("Failed to get software details.")
 		}
 		parsedData := rpm.ParseMetaData(string(metaData))
 
+		rpmName, err := rpm.GetRPMPackageName(filepath.FromSlash(file))
+		if err != nil {
+			logger.ConsoleError.PrintNReturnError("Failed to get software name.")
+			rpmName = filepath.Base(file)
+		}
+
+		var checksum string
+		for _, v := range includeFields {
+			if v == "checksum" {
+				f, err := fOpen(file)
+				if err != nil {
+					logger.ConsoleError.PrintNReturnError("Failed to get RPM file checksum. Error: [%v]", err.Error())
+				}
+				checksum = fGetChecksum(f)
+
+				defer f.Close()
+			}
+		}
+
 		if _, ok := parsedData[FormatVersionName]; !ok {
 			listData := v1RPMInfo{
-				Description: parsedData["Description"],
+				Description: []string{parsedData["Description"]},
 				FileName:    filepath.Base(file),
-				Name:        filepath.Base(file),
+				Name:        rpmName,
 				Summary:     parsedData["Summary"],
 				Type:        parsedData["Type"],
 				URL:         parsedData["URL"],
 				Version:     parsedData["Version"],
 				Reboot:      "n/a",
+				Release:     parsedData["Release"],
 			}
+
 			listData.Estimate.Hours = "0"
 			listData.Estimate.Minutes = "0"
 			listData.Estimate.Seconds = "0"
+
+			listData.Checksum = checksum
 			if "" != productVersion {
 				versionInfo, err := version.GetCompatibileVersionInfo(productVersion, parsedData["VersionInfo"])
 				//In case of error, i.e the version of rpm and product version is not compatible we ignore error and contiune execution
 				//This error is expected when the rpm is already applied. List API should still return rpm details
 				if err != nil {
-					log.Printf("Error in GetCompatibileVersionInfo::(%s)...",
-						err)
+					logger.Error.Printf("Error in GetCompatibileVersionInfo, err=%v", err)
 				}
+
+				listData.Description = append(listData.Description, versionInfo.Description...)
 				listData.matchedVersion = versionInfo.Version
 				listData.Reboot = versionInfo.Reboot
 				listData.Estimate.Hours = versionInfo.Estimate.Hours
@@ -308,7 +342,7 @@ func ListRPMFilesInfo(files []string, productVersion string) ([]RPMInfo, error) 
 
 			info = append(info, listData)
 		} else {
-			log.Printf("%s: %v", FormatVersionName, parsedData[FormatVersionName])
+			logger.Debug.Printf("%s: %v", FormatVersionName, parsedData[FormatVersionName])
 
 			listData := v2RPMInfo{
 				FileName: filepath.Base(file),
@@ -320,34 +354,32 @@ func ListRPMFilesInfo(files []string, productVersion string) ([]RPMInfo, error) 
 			rpmInfo := parsedData["RPM Info"]
 			err := yaml.Unmarshal([]byte(rpmInfo), &listData)
 			if err != nil {
-				log.Printf("yaml.Unmarshal(%s, %+v); Error: %s",
+				logger.Error.Printf("yaml.Unmarshal(%s, %+v); err=%s",
 					rpmInfo, &listData, err.Error())
 			}
-			t, err := parseDate(parsedData["Build Date"])
-			if err != nil {
-				log.Printf("Build date: %+v\n", t)
-				// listData.BuildDate = t
-			}
+			listData.BuildDate = parsedData["Build Date"]
+			listData.Checksum = checksum
 			if "" != productVersion {
 				allVersionsInfo := struct {
 					VersionInfo []struct {
 						Version          string `yaml:"product-version"`
 						v2productVersion `yaml:",inline"`
+						Description      []string `yaml:"description"`
 					} `yaml:"compatibility-info"`
 				}{}
 
 				err := yaml.Unmarshal([]byte(rpmInfo), &allVersionsInfo)
 				if err != nil {
-					log.Printf("yaml.Unmarshal(%s, %+v); Error: %s",
+					logger.Error.Printf("yaml.Unmarshal(%s, %+v); err=%s",
 						rpmInfo, &allVersionsInfo, err.Error())
 				}
-
 				// INFO: First check Version as-is,
 				// 	if there is no match, then do pattern comparison.
 				for _, vInfo := range allVersionsInfo.VersionInfo {
 					if productVersion == vInfo.Version {
 						listData.v2productVersion = vInfo.v2productVersion
 						listData.matchedVersion = vInfo.Version
+						listData.Description = append(listData.Description, vInfo.Description...)
 					}
 				}
 				if listData.matchedVersion == "" {
@@ -367,11 +399,11 @@ func ListRPMFilesInfo(files []string, productVersion string) ([]RPMInfo, error) 
 	return info, nil
 }
 
-//  registerCommandList registers the list command that enables one to
-// 	view the RPMs present in the software update repository.
+// registerCommandList registers the list command that enables one to
+// view the RPMs present in the software update repository.
 func registerCommandList(progname string) {
-	log.Printf("Entering repo::registerCommandList(%s)", progname)
-	defer log.Println("Exiting repo::registerCommandList")
+	logger.Debug.Printf("Entering repo::registerCommandList(%s)", progname)
+	defer logger.Debug.Println("Exiting repo::registerCommandList")
 
 	cmdOptions.listCmd = flag.NewFlagSet(progname+" list", flag.PanicOnError)
 
@@ -399,6 +431,14 @@ func registerCommandList(progname string) {
 		"type",
 		"",
 		"Type of the software.",
+	)
+	cmdOptions.listCmd.StringVar(
+		&cmdOptions.includeFields,
+		"include-fields",
+		"",
+		"In -include-fields comma separated values can be define. "+
+			"By default checksum field is not populate in response."+
+			"By using -include-fields='checksum' flag it will get populated in response",
 	)
 	output.RegisterCommandOptions(cmdOptions.listCmd,
 		map[string]string{"output-format": "yaml"})

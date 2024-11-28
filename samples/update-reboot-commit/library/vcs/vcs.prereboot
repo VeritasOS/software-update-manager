@@ -1,0 +1,4 @@
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+Description=Stopping VERITAS Cluster Server (VCS) service...
+ExecStart=/bin/sh ${PM_LIBRARY}/vcs/vcs-stop.sh
+Requires=asum-reboot/update_status.prereboot

@@ -1,0 +1,20 @@
+Name        : VRTSflex-update
+Version     : 3.2
+Release     : 20230314183059
+Architecture: x86_64
+Install Date: (not installed)
+Group       : Unspecified
+Size        : 5009390361
+License     : Copyright (c) 2023 Veritas Technologies LLC. All rights reserved.
+Signature   : RSA/SHA256, Wed Mar 15 01:51:36 2023, Key ID cf784714d9712e70
+Source RPM  : VRTSflex-update-3.2-20230314183059.src.rpm
+Build Date  : Wed Mar 15 01:12:33 2023
+Build Host  : dlauncher-odpnmgwq-1678842268-appbuildervm161
+Relocations : (not relocatable)
+Packager    : Appliance Solutions
+Vendor      : Veritas Technologies LLC
+URL         : https://www.veritas.com/support/en_US/doc/130821112-145890001-0
+Summary     : thunder_cloud 3.2 Update for thunder_cloud 3.2.
+Description :
+ASUM RPM Format Version : 2
+RPM Info    : {"description":["This release is primarily comprised of performance improvements and minor bug fixes.","Stop or relocate all running instances before you start the update on each node.","Note: If you choose to roll back after the update, you must stop all instances on all nodes."],"type":"update","compatibility-info":[{"product-version":"2.1.*","install":{"confirmation-message":["Make sure you've stopped or relocated the instances before you start the update."],"requires-restart":true,"supports-rollback":true,"estimated-minutes":90},"rollback":{"confirmation-message":["You must stop the instances on all appliance nodes before you start the rollback. The rollback requires a restart because the snapshot needs to be reverted."],"requires-restart":true,"estimated-minutes":40},"commit":{"confirmation-message":["Once the update is committed, you cannot roll back."],"estimated-minutes":5}},{"product-version":"3.0.*","install":{"confirmation-message":["Make sure you've stopped or relocated the instances before you start the update."],"requires-restart":true,"supports-rollback":true,"estimated-minutes":90},"rollback":{"confirmation-message":["You must stop the instances on all appliance nodes before you start the rollback. The rollback requires a restart because the snapshot needs to be reverted."],"requires-restart":true,"estimated-minutes":40},"commit":{"confirmation-message":["Once the update is committed, you cannot roll back."],"estimated-minutes":5}},{"product-version":"3.2.*","install":{"confirmation-message":["This is B2B please remove this block before release. Make sure you've stopped or relocated the instances before you start the update."],"requires-restart":true,"supports-rollback":true,"supports-precheck":true,"estimated-minutes":90},"rollback":{"confirmation-message":["You must stop the instances on all appliance nodes before you start the rollback. The rollback requires a restart because the snapshot needs to be reverted."],"requires-restart":true,"estimated-minutes":40},"commit":{"confirmation-message":["Once the update is committed, you cannot roll back."],"estimated-minutes":5}},{"product-version":"3.1.*","install":{"confirmation-message":["This is B2B please remove this block before release. Make sure you've stopped or relocated the instances before you start the update."],"requires-restart":true,"supports-rollback":true,"supports-precheck":true,"estimated-minutes":90},"rollback":{"confirmation-message":["You must stop the instances on all appliance nodes before you start the rollback. The rollback requires a restart because the snapshot needs to be reverted."],"requires-restart":true,"estimated-minutes":40},"commit":{"confirmation-message":["Once the update is committed, you cannot roll back."],"estimated-minutes":5}}]}

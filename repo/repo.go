@@ -1,17 +1,18 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2023 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 // Package repo defines software repository functions like listing, removing
-// 	packages from software repository.
+//
+//	packages from software repository.
 package repo
 
 import (
 	"flag"
 	"fmt"
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
 )
 
 // SoftwareRepoPath is the Software Update Repository path.
@@ -54,12 +55,16 @@ var cmdOptions struct {
 	// outputFormat indicates the output format to write the results.
 	//  Supported formats are "json", "yaml".
 	outputFormat string
+
+	// includeFields indicates additional RPM attributes to be read other than
+	// default ones
+	includeFields string
 }
 
 // RegisterCommandOptions registers the supported commands.
 func RegisterCommandOptions(progname string) {
-	log.Printf("Entering repo::RegisterCommandOptions(%s)", progname)
-	defer log.Println("Exiting repo::RegisterCommandOptions")
+	logger.Debug.Printf("Entering repo::RegisterCommandOptions(%s)", progname)
+	defer logger.Debug.Println("Exiting repo::RegisterCommandOptions")
 
 	registerCommandAdd(progname)
 	registerCommandList(progname)
@@ -68,8 +73,8 @@ func RegisterCommandOptions(progname string) {
 }
 
 func registerCommandVersion(progname string) {
-	log.Printf("Entering repo::registerCommandVersion(%s)", progname)
-	defer log.Println("Exiting repo::registerCommandVersion")
+	logger.Debug.Printf("Entering repo::registerCommandVersion(%s)", progname)
+	defer logger.Debug.Println("Exiting repo::registerCommandVersion")
 
 	cmdOptions.versionCmd = flag.NewFlagSet(progname+" version", flag.ContinueOnError)
 	cmdOptions.versionPtr = cmdOptions.versionCmd.Bool(
@@ -82,13 +87,13 @@ func registerCommandVersion(progname string) {
 // ScanCommandOptions scans for the command line options and makes appropriate
 // function call.
 // Input:
-// 	1. map[string]interface{}
-//    where, the options could be following:
-// 		"progname":  Name of the program along with any cmds (ex: asum pm)
-// 		"cmd-index": Index to the cmd (ex: run)
+//  1. map[string]interface{}
+//     where, the options could be following:
+//     "progname":  Name of the program along with any cmds (ex: asum pm)
+//     "cmd-index": Index to the cmd (ex: run)
 func ScanCommandOptions(options map[string]interface{}) error {
-	log.Printf("Entering ScanCommandOptions(%+v)...", options)
-	defer log.Println("Exiting ScanCommandOptions")
+	logger.Debug.Printf("Entering ScanCommandOptions(%+v)...", options)
+	defer logger.Debug.Println("Exiting ScanCommandOptions")
 
 	progname := filepath.Base(os.Args[0])
 	cmdIndex := 1
@@ -99,17 +104,17 @@ func ScanCommandOptions(options map[string]interface{}) error {
 		cmdIndex = valI.(int)
 	}
 	cmd := os.Args[cmdIndex]
-	log.Println("progname:", progname, "cmd with arguments:", os.Args[cmdIndex:])
+	logger.Debug.Println("progname:", progname, "cmd with arguments:", os.Args[cmdIndex:])
 
 	var err error
 	switch cmd {
 	case "version":
-		logutil.PrintNLog("Software Repository Manager version %s\n", myVersion)
+		logger.ConsoleInfo.Printf("Software Repository Manager version %s", myVersion)
 
 	case "add":
 		err = cmdOptions.addCmd.Parse(os.Args[3:])
 		if err != nil {
-			return logutil.PrintNLogError(cmd, "command arguments parse error:", err.Error())
+			return logger.ConsoleError.PrintNReturnError("Command arguments parse error, cmd=%s, err=%s", cmd, err.Error())
 		}
 		err = Add(cmdOptions.softwarePath,
 			map[string]string{
@@ -119,7 +124,7 @@ func ScanCommandOptions(options map[string]interface{}) error {
 	case "list":
 		err = cmdOptions.listCmd.Parse(os.Args[3:])
 		if err != nil {
-			return logutil.PrintNLogError(cmd, "command arguments parse error:", err.Error())
+			return logger.ConsoleError.PrintNReturnError("Command arguments parse error, cmd=%s, err=%s", cmd, err.Error())
 		}
 
 		params := map[string]string{
@@ -129,13 +134,14 @@ func ScanCommandOptions(options map[string]interface{}) error {
 			"productVersion": cmdOptions.productVersion,
 			"outputFile":     cmdOptions.outputFile,
 			"outputFormat":   cmdOptions.outputFormat,
+			"includeFields":  cmdOptions.includeFields,
 		}
 		_, err = List(params)
 
 	case "remove":
 		err = cmdOptions.removeCmd.Parse(os.Args[3:])
 		if err != nil {
-			return logutil.PrintNLogError(cmd, "command arguments parse error:", err.Error())
+			return logger.ConsoleError.PrintNReturnError("Command arguments parse error, cmd=%s, err=%s", cmd, err.Error())
 		}
 		err = Remove(cmdOptions.softwareName, cmdOptions.softwareType, cmdOptions.softwareRepo)
 
@@ -144,7 +150,7 @@ func ScanCommandOptions(options map[string]interface{}) error {
 		if len(os.Args) == cmdIndex+2 {
 			subcmd = os.Args[cmdIndex+1]
 		} else if len(os.Args) > cmdIndex+2 {
-			fmt.Fprintf(os.Stderr, "usage: %s help command\n\nToo many arguments (%d) given.\n", progname, len(os.Args))
+			fmt.Fprintf(os.Stderr, "Usage: %s help command\n\nToo many arguments (%d) given.\n", progname, len(os.Args))
 			os.Exit(2)
 		}
 		usage(progname, subcmd)

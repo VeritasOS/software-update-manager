@@ -1,13 +1,20 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2024 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 // Package repo defines software repository functions like listing, removing
-// 	packages from software repository.
+// packages from software repository.
 package repo
 
 import (
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
 	"reflect"
 	"testing"
-	"time"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestList(t *testing.T) {
@@ -36,43 +43,115 @@ func TestList(t *testing.T) {
 	}
 }
 
-func Test_parseDate(t *testing.T) {
-	wantT1, _ := time.Parse("Mon 02 Jan 2006 03:04:05 PM MST",
-		"Wed 06 Jan 2021 04:48:21 PM PST")
-	wantT2, _ := time.Parse(time.ANSIC, "Thu Feb  4 22:08:16 2021")
+func readFile(filename string) ([]byte, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	return ioutil.ReadAll(file)
+}
+
+// TODO: Fix this test
+func _TestListRPMFilesInfo(t *testing.T) {
+	logger.InitFileLogger("test.log", "INFO")
+
 	type args struct {
-		rawDate string
+		files            []string
+		productVersion   string
+		includeFields    string
+		metadataFilePath string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    time.Time
+		want    string
 		wantErr bool
 	}{
 		{
-			name: "Build date layout 1",
+			name: "should return checksum alongwith default attributes",
 			args: args{
-				rawDate: "Wed 06 Jan 2021 04:48:21 PM PST",
+				files:            []string{"VRTSflex-update-3.2.rpm"},
+				productVersion:   "2.1",
+				includeFields:    "checksum",
+				metadataFilePath: "./test_files/valid-rpm-metadata.txt",
 			},
-			want: wantT1,
+			want: "./test_files/include-checksum-response.yaml",
 		},
 		{
-			name: "Build date layout 2",
+			name: "Should return default fields if --include-fields not provided",
 			args: args{
-				rawDate: "Thu Feb  4 22:08:16 2021",
+				files:            []string{"VRTSflex-update-3.2.rpm"},
+				productVersion:   "2.1",
+				includeFields:    "",
+				metadataFilePath: "./test_files/valid-rpm-metadata.txt",
 			},
-			want: wantT2,
+			want: "./test_files/default-response.yaml",
+		},
+		{
+			name: "Should return default fields if invalid --include-fields provided",
+			args: args{
+				files:            []string{"VRTSflex-update-3.2.rpm"},
+				productVersion:   "2.1",
+				includeFields:    "asas",
+				metadataFilePath: "./test_files/valid-rpm-metadata.txt",
+			},
+			want: "./test_files/default-response.yaml",
 		},
 	}
+
+	originalGetChecksum := fGetChecksum
+	originalfGetRPMPackageInfo := fGetRPMPackageInfo
+	defer func() {
+		fGetChecksum = originalGetChecksum
+		fOpen = os.Open
+		fGetRPMPackageInfo = originalfGetRPMPackageInfo
+	}()
+	fGetChecksum = func(src io.Reader) string {
+		return "random_checksum"
+	}
+	fOpen = func(name string) (*os.File, error) {
+		return nil, nil
+	}
 	for _, tt := range tests {
+		fGetRPMPackageInfo = func(rpmPath string) ([]byte, error) {
+			return readFile(tt.args.metadataFilePath)
+		}
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseDate(tt.args.rawDate)
+			got, err := ListRPMFilesInfo(tt.args.files, tt.args.productVersion, tt.args.includeFields)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("List() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseDate() = %v, want %v", got, tt.want)
+
+			jsonOut, err := yaml.Marshal(got)
+			if err != nil {
+				panic(err)
+			}
+			expectedByte, _ := readFile(tt.want)
+
+			ex := []byte{}
+			g := []byte{}
+			counter := -1
+
+			for i, b := range expectedByte {
+				if string(jsonOut[i]) != string(b) {
+					ex = append(ex, jsonOut[i])
+					g = append(g, b)
+					counter = 0
+				} else {
+					if counter == 0 && len(g) != 0 {
+						t.Errorf("Got =  %v, expected  %v", string(g), string(ex))
+					}
+					ex = ex[:0]
+					g = g[:0]
+					counter = -1
+				}
 			}
 		})
 	}

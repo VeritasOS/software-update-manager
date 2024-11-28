@@ -1,14 +1,16 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2022 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 // Package repo defines software repository functions like listing, removing
-// 	packages from software repository.
+//
+//	packages from software repository.
 package repo
 
 import (
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
 	"os"
 	"strings"
 	"testing"
+
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
 )
 
 func TestRemove(t *testing.T) {
@@ -63,6 +65,8 @@ func TestRemove(t *testing.T) {
 			wantErr: false,
 		},
 	}
+	// Set log file name to "test", so that cleaning becomes easier.
+	logger.InitFileLogger("test.log", "INFO")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var err error
@@ -87,7 +91,7 @@ func TestRemove(t *testing.T) {
 					if err != nil {
 						t.Errorf("Failed to create new file %s. Error: %s.", path, err.Error())
 					}
-					logutil.PrintNLog("New file details: %+v\n", fi.Name())
+					logger.ConsoleInfo.Printf("New file details: %+v", fi.Name())
 					fi.Close()
 				}
 			}

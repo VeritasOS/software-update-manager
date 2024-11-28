@@ -1,0 +1,104 @@
+# Copyright (c) 2020 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+
+- name: Update precheck
+  hosts: localhost
+  remote_user: root
+  gather_facts: yes
+  vars:
+    web_console_ip: "{{ ansible_local.config.cluster.web_console_ip }}"
+    token: "{{ lookup('file', '/mnt/data/token/host_agent_token.jwt') }}"
+  tasks:
+
+    - set_fact: detailedErrMsg=""
+
+    - uri:
+        url: https://{{ web_console_ip }}//ms/v1/api/tasks
+        method: GET
+        validate_certs: no
+        headers:
+          Content-Type: "application/json"
+          x-auth-token: "{{ token }}"
+      register: tasks
+
+    - name: Fetch taskID of the latest running update task
+      set_fact:
+        taskID: "{{ item.id }}"
+      when:
+        - item != ""
+        - item.state == "InProgress"
+        - item.type == "Update node"
+      with_items: "{{ tasks.json.tasks }}"
+
+    - name: Check if there is a non-patch-update task that is currently in progress
+      set_fact:
+        detailedErrMsg: "Appliance update precheck failed. At least one operation is in progress on the appliance. Wait for all current operations to complete and try again."
+      when:
+        - item != ""
+        - item.state == "InProgress"
+        - item.type != "Update node"
+      with_items: "{{ tasks.json.tasks }}"
+
+    - name: Update task status - Precheck failed as there is a task in progress
+      inframodules:
+        operation: update-task
+        taskID: "{{ taskID }}"
+        StepID: "INSTALL"
+        StepStatus: "FAILED"
+        TaskMessage: "{{ detailedErrMsg }}"
+      when: detailedErrMsg != ''
+
+    - fail: msg="Precheck failed as there is a task In progress."
+      when: detailedErrMsg != ''
+
+    - uri:
+        url: https://{{ web_console_ip }}//ms/v1/api/instances
+        method: GET
+        validate_certs: no
+        headers:
+          Content-Type: "application/json"
+          x-auth-token: "{{ token }}"
+      register: instances
+
+    - name: Check if there is a pending instance upgrade
+      set_fact:
+        detailedErrMsg: "Appliance update precheck failed. At least one instance upgrade is in progress or pending. Complete all in-progress instance upgrades from the Flex Appliance Console, then try again."
+      when: item.upgradeState.status != ""
+      with_items: "{{ instances.json }}"
+
+    - name: Update task status - Precheck failed as there is a task in progress
+      inframodules:
+        operation: update-task
+        taskID: "{{ taskID }}"
+        StepID: "INSTALL"
+        StepStatus: "FAILED"
+        TaskMessage: "{{ detailedErrMsg }}"
+      when: detailedErrMsg != ''
+
+    - fail: msg="Precheck failed as there is a pending instance upgrade."
+      when: detailedErrMsg != ''
+
+    - name: Get hostname
+      command: hostname
+      register: hname
+
+    - name: Check if there is an online instance on the node
+      set_fact:
+        detailedErrMsg: "Appliance update precheck failed. At least one instance is not offline on the appliance. Stop the instance from the Flex Appliance Console, then try again."
+      when:
+        - item[1].status != "OFFLINE"
+        - item[1].node == hname.stdout
+      with_subelements:
+        - "{{ instances.json }}"
+        - state
+
+    - name: Update task status - Precheck failed as there is instance online on the node
+      inframodules:
+        operation: update-task
+        taskID: "{{ taskID }}"
+        StepID: "INSTALL"
+        StepStatus: "FAILED"
+        TaskMessage: "{{ detailedErrMsg }}"
+      when: detailedErrMsg != ''
+
+    - fail: msg="Precheck failed as there is instance online on the node."
+      when: detailedErrMsg != ''

@@ -1,0 +1,2 @@
+Description=Checking for in-progress operations and status of application instances
+ExecStart=ansible-playbook ${PM_LIBRARY}/instances/online-check.yml

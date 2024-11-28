@@ -6,7 +6,7 @@ VERSION ?= 2.0
 BRANCH ?= main
 
 TOP	= $(shell pwd)
-ASUM_SDK_PATH ?= $(TOP)/../../sdk/
+SUM_SDK_PATH ?= $(TOP)/../../sdk/
 
 UPDATE_VERSION ?= $(VERSION).1
 UPDATE_RELEASE ?= $(shell /usr/bin/date -u +%Y%m%d%H%M%S)
@@ -20,20 +20,20 @@ all: update
 
 .PHONY: update
 update:
-	@echo "======== Generating update RPM using ASUM SDK..."; \
-	$(MAKE) -C $(ASUM_SDK_PATH) generate \
+	@echo "======== Generating update RPM using SUM SDK..."; \
+	$(MAKE) -C $(SUM_SDK_PATH) generate \
 		PLUGINS_LIBRARY=$(TOP)/library/ \
 		RPM_NAME=$(UPDATE_RPM_NAME) \
 		RPM_VERSION=$(UPDATE_VERSION) \
 		RPM_RELEASE=$(UPDATE_RELEASE) \
 		RPM_URL=$(UPDATE_URL) \
-		RPM_SUMMARY="Sample Update RPM created using ASUM SDK" \
+		RPM_SUMMARY="Sample Update RPM created using SUM SDK" \
 		RPM_INFO_FILE=$(UPDATE_RPM_INFO_FILE) || exit $$?
 
 
 .PHONY: clean
 clean:
-	$(MAKE) -C $(ASUM_SDK_PATH) clean
+	$(MAKE) -C $(SUM_SDK_PATH) clean
 
 
 .PHONY: strip_watermark
