@@ -1,19 +1,20 @@
-// Copyright (c) 2021 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
+// Copyright (c) 2022 Veritas Technologies LLC. All rights reserved. IP63-2828-7171-04-15-9
 
 package main
 
 import (
 	"flag"
 	"fmt"
-	pm "github.com/VeritasOS/plugin-manager" // import "../../plugin-manager"
-	"github.com/VeritasOS/plugin-manager/config"
-	logutil "github.com/VeritasOS/plugin-manager/utils/log"
-	"github.com/VeritasOS/software-update-manager/repo"
-	"github.com/VeritasOS/software-update-manager/update"
-	"github.com/VeritasOS/software-update-manager/validate"
 	"os"
 	"path/filepath"
 	"strings"
+
+	pm "github.com/VeritasOS/plugin-manager" // import "../../plugin-manager"
+	logger "github.com/VeritasOS/plugin-manager/utils/log"
+	"github.com/VeritasOS/software-update-manager/boot"
+	"github.com/VeritasOS/software-update-manager/repo"
+	"github.com/VeritasOS/software-update-manager/update"
+	"github.com/VeritasOS/software-update-manager/validate"
 )
 
 var (
@@ -35,31 +36,34 @@ var mainCmdOptions struct {
 }
 
 func init() {
-	config.SetLogDir("/var/log/sum/")
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Subcommand as operation is required.\n")
+		os.Exit(1)
+	}
+	logger.InitLogging()
 }
 
 func main() {
 	absprogpath, err := filepath.Abs(os.Args[0])
 	if err != nil {
-		logutil.PrintNLogError("Failed to get the %s path.", progname)
+		logger.ConsoleError.Printf("Failed to get the %s path.", progname)
 	}
-
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Subcommand as operation is required.\n")
-		os.Exit(1)
-	}
-
-	cmd := os.Args[1]
-	config.SetLogFile(cmd)
-	logutil.SetLogging(config.GetLogDir() + config.GetLogFile())
 
 	mainRegisterCmdOptions()
 	pm.RegisterCommandOptions(progname + " pm")
 	repo.RegisterCommandOptions(progname + " repo")
 	update.RegisterCommandOptions(progname)
+	cmd := os.Args[1]
 	switch cmd {
 	case "version":
-		logutil.PrintNLog("%s version %s %s\n", progname, version, buildDate)
+		logger.ConsoleInfo.Printf("%s version %s %s", progname, version, buildDate)
+
+	case "boot":
+		err := boot.Exec(os.Args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to execute boot command: %v.\n", err.Error())
+			os.Exit(1)
+		}
 
 	case "commit", "install", "reboot", "rollback":
 		library := filepath.Clean(
